@@ -1,0 +1,1 @@
+timestamp,controller,scenario,run_id,success,time_to_goal_s,path_length_m,min_clearance_m,smoothness_dv,smoothness_dw,cpu_percent,recovery_count

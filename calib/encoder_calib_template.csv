@@ -1,0 +1,13 @@
+trial,wheel,direction,ticks
+1,left,cw,
+2,left,cw,
+3,left,cw,
+1,right,cw,
+2,right,cw,
+3,right,cw,
+1,left,ccw,
+2,left,ccw,
+3,left,ccw,
+1,right,ccw,
+2,right,ccw,
+3,right,ccw,

@@ -1,0 +1,23 @@
+# colcon
+**/build/
+**/install/
+**/log/
+
+# rosbag2 / datasets
+**/*.db3
+**/*.mcap
+**/*.bag
+experiments/runs/
+datasets/
+data/
+
+# python
+**/__pycache__/
+**/*.pyc
+
+# editors / OS
+.vscode/
+.idea/
+*.swp
+*.tmp
+.DS_Store

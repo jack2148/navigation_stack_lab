@@ -1,0 +1,10 @@
+scenario: S3_dynamic_preempt
+description: "Dynamic obstacle + goal preemption (event-driven dispatch)"
+goals:
+
+{x: 0.0, y: 0.0, yaw: 0.0}
+
+{x: 4.0, y: 0.0, yaw: 0.0}
+preempt_goal:
+trigger: sound_event
+goal: {x: 1.0, y: 3.0, yaw: 1.57}

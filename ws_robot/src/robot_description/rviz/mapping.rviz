@@ -1,0 +1,3 @@
+# RViz config placeholder.
+# Tip: In RViz, set Fixed Frame=odom (or map after SLAM starts),
+# add TF, LaserScan(/scan), Odometry(/odom), and Map(/map).

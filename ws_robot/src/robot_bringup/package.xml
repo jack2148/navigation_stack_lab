@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>robot_bringup</name>
+  <version>0.0.1</version>
+  <description>Launch + config for base, sensors, and slam_toolbox.</description>
+  <maintainer email="you@example.com">you</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <exec_depend>robot_base</exec_depend>
+  <exec_depend>robot_sensors</exec_depend>
+  <exec_depend>robot_description</exec_depend>
+
+  <exec_depend>slam_toolbox</exec_depend>
+</package>

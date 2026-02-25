@@ -1,0 +1,14 @@
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: false
+    mode: mapping
+
+    # Frames (must match TF)
+    map_frame: map
+    odom_frame: odom
+    base_frame: base_link
+
+    # Topic
+    scan_topic: /scan
+
+    # Keep defaults for now. Tune later.

@@ -1,0 +1,11 @@
+lidar_stub:
+  ros__parameters:
+    frame_id: "laser"
+    scan_topic: "/scan"
+    scan_rate_hz: 10.0
+
+    angle_min: -3.141592653589793
+    angle_max:  3.141592653589793
+    range_min: 0.05
+    range_max: 12.0
+    num_samples: 360

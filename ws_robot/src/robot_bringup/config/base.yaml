@@ -1,0 +1,20 @@
+can_bridge:
+  ros__parameters:
+    can_interface: "can0"
+    publish_rate_hz: 50.0
+
+    # 개발용: CAN이 아직 불안정해도 파이프라인을 테스트할 수 있게 더미 엔코더를 생성
+    simulate: true
+    simulate_left_ticks_per_s: 800.0
+    simulate_right_ticks_per_s: 800.0
+
+wheel_odometry:
+  ros__parameters:
+    wheel_radius: 0.05         # [m] TODO: 실제 값으로 업데이트
+    wheel_separation: 0.30     # [m] TODO: 실제 값으로 업데이트
+    ticks_per_rev: 4096.0      # TODO: 실제 값으로 업데이트
+
+    odom_frame: "odom"
+    base_frame: "base_link"
+    publish_tf: true
+    max_dt: 0.2

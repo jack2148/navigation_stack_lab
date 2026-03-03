@@ -1,6 +1,9 @@
+<?xml version="1.0"?>
 <robot name="diff_robot">
 
-  <!--  Base frames -->
+  <!-- REP-103: x forward, y left, z up -->
+
+  <!-- Base frames -->
   <link name="base_footprint"/>
   <link name="base_link"/>
 
@@ -10,21 +13,18 @@
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
-  <!--  Wheels -->
+  <!-- Wheels -->
   <link name="left_wheel_link"/>
   <link name="right_wheel_link"/>
 
-  <!-- Left wheel joint -->
+  <!-- Wheel separation b = 0.57 m -> y = ±0.285 m -->
   <joint name="left_wheel_joint" type="continuous">
     <parent link="base_link"/>
     <child link="left_wheel_link"/>
-    <!-- y는 +, 오른쪽은 -가 일반적 (REP-103: x forward, y left, z up) -->
-    <origin xyz="0 +0.285 0" rpy="0 0 0"/>
-    <!-- 휠 회전축: 일반적으로 y축(차동구동), 로봇 모델에 따라 x일 수도 있음 -->
+    <origin xyz="0 0.285 0" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
   </joint>
 
-  <!-- Right wheel joint -->
   <joint name="right_wheel_joint" type="continuous">
     <parent link="base_link"/>
     <child link="right_wheel_link"/>
@@ -32,14 +32,44 @@
     <axis xyz="0 1 0"/>
   </joint>
 
-  <!--  LiDAR -->
-  <link name="laser_link"/>
+  <!-- LiDAR -->
+  <!-- IMPORTANT: link name MUST match /scan header.frame_id -->
+  <link name="laser"/>
 
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="laser_link"/>
-    <!-- LiDAR 장착 위치(앞/위) -->
+    <child link="laser"/>
     <origin xyz="0.00 0.00 0.30" rpy="0 0 0"/>
   </joint>
+
+  <!-- =========================
+       ros2_control integration
+       ========================= -->
+  <ros2_control name="DiffDriveSystem" type="system">
+    <hardware>
+      <!-- Must match the plugin exported by pluginlib -->
+      <plugin>CanDiffDriveHW</plugin>
+
+      <!-- Hardware params: adjust as needed -->
+      <param name="can_iface">can0</param>
+      <param name="ticks_per_wheel_rev">440.5</param>
+      <param name="wheel_sign_l">-1</param>
+      <param name="wheel_sign_r">+1</param>
+      <param name="gear_ratio">15</param>
+      <param name="max_motor_rpm">30000</param>
+    </hardware>
+
+    <joint name="left_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="right_wheel_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
 
 </robot>

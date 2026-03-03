@@ -2,25 +2,14 @@
 <package format="3">
   <name>robot_base</name>
   <version>0.0.1</version>
-  <description>CAN bridge + wheel odometry for a differential-drive base.</description>
-  <maintainer email="you@example.com">you</maintainer>
+  <description>ros2_control hardware interface for CAN diff drive</description>
+  <maintainer email="yeachan4842@gmail.com">you</maintainer>
   <license>Apache-2.0</license>
-
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <!-- Messages -->
-  <build_depend>rosidl_default_generators</build_depend>
-  <exec_depend>rosidl_default_runtime</exec_depend>
-
-  <!-- Runtime deps -->
   <depend>rclcpp</depend>
-  <depend>std_msgs</depend>
-  <depend>nav_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>
-  <depend>tf2_geometry_msgs</depend>
-
-  <member_of_group>rosidl_interface_packages</member_of_group>
+  <depend>hardware_interface</depend>
+  <depend>controller_manager</depend>
+  <depend>diff_drive_controller</depend>
+  <depend>pluginlib</depend>
+  <export><build_type>ament_cmake</build_type></export>
 </package>

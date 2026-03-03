@@ -1,0 +1,45 @@
+<robot name="diff_robot">
+
+  <!--  Base frames -->
+  <link name="base_footprint"/>
+  <link name="base_link"/>
+
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!--  Wheels -->
+  <link name="left_wheel_link"/>
+  <link name="right_wheel_link"/>
+
+  <!-- Left wheel joint -->
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel_link"/>
+    <!-- y는 +, 오른쪽은 -가 일반적 (REP-103: x forward, y left, z up) -->
+    <origin xyz="0 +0.285 0" rpy="0 0 0"/>
+    <!-- 휠 회전축: 일반적으로 y축(차동구동), 로봇 모델에 따라 x일 수도 있음 -->
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- Right wheel joint -->
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel_link"/>
+    <origin xyz="0 -0.285 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!--  LiDAR -->
+  <link name="laser_link"/>
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_link"/>
+    <!-- LiDAR 장착 위치(앞/위) -->
+    <origin xyz="0.00 0.00 0.30" rpy="0 0 0"/>
+  </joint>
+
+</robot>

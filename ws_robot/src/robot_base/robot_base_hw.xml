@@ -1,0 +1,6 @@
+
+<library path="robot_base_hw">
+  <class name="CanDiffDriveHW"
+         type="CanDiffDriveHW"
+         base_class_type="hardware_interface::SystemInterface"/>
+</library>

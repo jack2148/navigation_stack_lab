@@ -53,7 +53,7 @@
       <!-- Hardware params: adjust as needed -->
       <param name="can_iface">can0</param>
       <param name="ticks_per_wheel_rev">440.5</param>
-      <param name="wheel_sign_l">-1</param>
+      <param name="wheel_sign_l">+1</param>
       <param name="wheel_sign_r">+1</param>
       <param name="gear_ratio">15</param>
       <param name="max_motor_rpm">30000</param>

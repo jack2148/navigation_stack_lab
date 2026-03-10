@@ -2,6 +2,7 @@
 **/build/
 **/install/
 **/log/
+ws_robot/src/ydlidar_ros2_driver/
 
 # rosbag2 / datasets
 **/*.db3
@@ -21,3 +22,7 @@ data/
 *.swp
 *.tmp
 .DS_Store
+
+ws_robot/build/
+ws_robot/install/
+ws_robot/log/

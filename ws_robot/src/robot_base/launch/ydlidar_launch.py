@@ -42,18 +42,7 @@ def generate_launch_description():
         namespace='/',
     )
 
-    # 4. TF 퍼블리셔 (LiDAR 위치)
-    tf2_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_pub_laser',
-        # arguments 순서: x y z yaw pitch roll frame_id child_frame_id
-        # (쿼터니언 대신 오일러 각 사용 시 편의성 고려)
-        arguments=['0', '0', '0.02', '0', '0', '0', '1', 'base_link', 'laser_frame'],
-    )
-
     return LaunchDescription([
         params_declare,
         driver_node,
-        tf2_node,
     ])

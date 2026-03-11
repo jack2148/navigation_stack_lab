@@ -16,6 +16,6 @@ diff_drive_controller:
     wheel_separation: 0.57
     wheel_radius: 0.0929
     publish_rate: 50.0
-    odom_frame_id: odomro
+    odom_frame_id: odom
     base_frame_id: base_footprint
     enable_odom_tf: true

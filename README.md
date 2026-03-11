@@ -7,7 +7,7 @@
 - The system is designed for indoor security patrol scenarios.
 
 ## 2. System Architecture
-(Diagram placeholder)
+- 
 
 ## 3. TF Tree
 (To be updated after implementation)

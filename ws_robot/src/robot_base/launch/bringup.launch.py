@@ -74,6 +74,60 @@ def generate_launch_description():
         output="screen",
     )
 
+    # ---------- IMU 로드 노드 ----------
+    # 로직: 작성했던 imu.cpp를 빌드한 실행파일을 켭니다. 파라미터로 포트와 속도를 넘겨줍니다.
+    imu_node = Node(
+        package="robot_base",
+        executable="imu_node", # CMakeLists.txt에 정의될/된 실행파일명에 맞추셔야 합니다. (보통 imu_node 등)
+        name="ebimu_publisher",
+        output="screen",
+        parameters=[
+            {"port": "/dev/ttyUSB0"},
+            {"baudrate": 115200}
+        ]
+    )
+
+    # ---------- EKF 노드 (robot_localization) ----------
+    # 로직: 휠 오도메트리(Wheel)와 IMU 센서 데이터를 융합(Fusion)하여 더 정확한 Odom을 계산합니다.
+    ekf_node = Node(
+        package="robot_localization",
+        executable="ekf_node",
+        name="ekf_filter_node",
+        output="screen",
+        parameters=[
+            {"use_sim_time": False},
+            {"frequency": 30.0},
+            {"sensor_timeout": 0.1},
+            {"two_d_mode": True}, # 2D 평면을 주행하므로 True
+            {"publish_tf": True},
+            {"map_frame": "map"},
+            {"odom_frame": "odom"},
+            {"base_link_frame": "base_footprint"}, # 로봇 URDF의 최하단 링크
+            {"world_frame": "odom"},
+
+            # 1. 휠 오도메트리 파라미터 연동
+            # diff_drive_controller에서 나오는 초기 odom 값 사용
+            {"odom0": "/diff_drive_controller/odom"},
+            # [X, Y, Z, Roll, Pitch, Yaw, Vx, Vy, Vz, Vroll, Vpitch, Vyaw, Ax, Ay, Az]
+            # X, Y 위치와 V_x, V_yaw 속도만 주로 신뢰합니다.
+            {"odom0_config": [True,  True,  False,
+                              False, False, True,
+                              True,  False, False,
+                              False, False, True,
+                              False, False, False]},
+                              
+            # 2. IMU 데이터 파라미터 연동
+            # 센서에서 직접 퍼블리시한 IMU 데이터 경로
+            {"imu0": "/imu/data"},
+            # IMU는 주로 방향(Yaw)과 각속도(Vyaw)에 강점이 있으므로 그 부분을 신뢰합니다.
+            {"imu0_config": [False, False, False,
+                             False, False, True,
+                             False, False, False,
+                             False, False, True,
+                             False, False, False]},
+        ]
+    )
+
     return LaunchDescription([
         params_declare,
         robot_state_pub_node,
@@ -81,4 +135,6 @@ def generate_launch_description():
         ydlidar_driver_node,
         joint_state_broadcaster_spawner,
         diff_drive_controller_spawner,
+        imu_node,
+        ekf_node,
     ])

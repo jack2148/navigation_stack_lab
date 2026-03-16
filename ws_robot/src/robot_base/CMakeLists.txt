@@ -13,6 +13,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
+# IMU용 메시지 패키지 추가
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
@@ -30,6 +31,7 @@ ament_target_dependencies(robot_base_hw
 # Export plugin description
 pluginlib_export_plugin_description_file(hardware_interface robot_base_hw.xml)
 
+# --- IMU 노드 실행파일 추가 ---
 add_executable(imu_node src/imu.cpp)
 ament_target_dependencies(imu_node
   rclcpp
@@ -38,10 +40,15 @@ ament_target_dependencies(imu_node
 )
 
 # Install library & resources
-install(TARGETS robot_base_hw imu_node
+install(TARGETS robot_base_hw
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
+)
+
+# --- IMU 노드 설치 경로 추가 ---
+install(TARGETS imu_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY launch config urdf

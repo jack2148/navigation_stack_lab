@@ -13,6 +13,8 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 add_library(robot_base_hw SHARED
   src/can_hw.cpp
@@ -28,8 +30,15 @@ ament_target_dependencies(robot_base_hw
 # Export plugin description
 pluginlib_export_plugin_description_file(hardware_interface robot_base_hw.xml)
 
+add_executable(imu_node src/imu.cpp)
+ament_target_dependencies(imu_node
+  rclcpp
+  sensor_msgs
+  std_msgs
+)
+
 # Install library & resources
-install(TARGETS robot_base_hw
+install(TARGETS robot_base_hw imu_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

@@ -17,5 +17,8 @@
   <depend>controller_manager</depend>
   <depend>diff_drive_controller</depend>
   <depend>pluginlib</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <exec_depend>robot_localization</exec_depend>
   <export><build_type>ament_cmake</build_type></export>
 </package>

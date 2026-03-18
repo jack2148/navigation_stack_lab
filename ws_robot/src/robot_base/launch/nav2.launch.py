@@ -12,14 +12,13 @@ def generate_launch_description():
         'bringup_launch.py'
     )
 
-
     return LaunchDescription([
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),
             launch_arguments={
                 'map': '/home/chan/maps/map_v1_debug.yaml',
                 'use_sim_time': 'false',
-                'params_file' : 'home/chan/navigation_stack_lab/ws_robot/src/robot_base/config/amcl.yaml'
+                'params_file': '/home/chan/navigation_stack_lab/ws_robot/src/robot_base/config/nav2_params.yaml'
             }.items()
         )
     ])

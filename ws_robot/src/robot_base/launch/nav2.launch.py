@@ -16,7 +16,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),
             launch_arguments={
-                'map': '/home/chan/maps/map_v1_debug.yaml',
+                'map': '/home/chan/maps/map_v2_test.yaml',
                 'use_sim_time': 'false',
                 'params_file': '/home/chan/navigation_stack_lab/ws_robot/src/robot_base/config/nav2_params.yaml'
             }.items()

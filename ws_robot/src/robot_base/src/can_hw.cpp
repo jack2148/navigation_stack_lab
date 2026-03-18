@@ -45,7 +45,7 @@ public:
 
     // Encoder sign (if your ticks decrease on forward, set -1)
     enc_sign_l_ = +1.0;
-    enc_sign_r_ = +1.0;
+    enc_sign_r_ = -1.0;
 
     // If STM32 expects motor RPM directly (rare in your posted STM32 code), enable true
     send_motor_rpm_ = false;

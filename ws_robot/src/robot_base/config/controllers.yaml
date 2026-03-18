@@ -13,7 +13,7 @@ diff_drive_controller:
     use_stamped_vel: false
     left_wheel_names: ["left_wheel_joint"]
     right_wheel_names: ["right_wheel_joint"]
-    wheel_separation: 0.57
+    wheel_separation: 0.56
     wheel_radius: 0.0929
     publish_rate: 50.0
     odom_frame_id: odom

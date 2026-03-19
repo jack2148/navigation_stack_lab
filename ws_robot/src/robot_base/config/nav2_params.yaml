@@ -1,12 +1,12 @@
 amcl:
   ros__parameters:
     use_sim_time: false
-    alpha1: 0.2
-    alpha2: 0.2
-    alpha3: 0.2
-    alpha4: 0.2
-    alpha5: 0.2
-    base_frame_id: base_link
+    alpha1: 0.1
+    alpha2: 0.1
+    alpha3: 0.1
+    alpha4: 0.1
+    alpha5: 0.1
+    base_frame_id: base_footprint
     beam_skip_distance: 0.5
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
@@ -18,8 +18,8 @@ amcl:
     laser_min_range: 0.05
     laser_model_type: likelihood_field
     max_beams: 60
-    max_particles: 2000
-    min_particles: 500
+    max_particles: 4000
+    min_particles: 1000
     odom_frame_id: odom
     pf_err: 0.05
     pf_z: 0.99
@@ -33,8 +33,8 @@ amcl:
     sigma_hit: 0.2
     tf_broadcast: true
     transform_tolerance: 0.5
-    update_min_a: 0.05
-    update_min_d: 0.05
+    update_min_a: 0.2
+    update_min_d: 0.2
     z_hit: 0.5
     z_max: 0.05
     z_rand: 0.5
@@ -143,7 +143,7 @@ local_costmap:
     ros__parameters:
       use_sim_time: false
       global_frame: odom
-      robot_base_frame: base_link
+      robot_base_frame: base_footprint
       update_frequency: 5.0
       publish_frequency: 2.0
       rolling_window: true
@@ -177,7 +177,7 @@ global_costmap:
     ros__parameters:
       use_sim_time: false
       global_frame: map
-      robot_base_frame: base_link
+      robot_base_frame: base_footprint
       update_frequency: 1.0
       publish_frequency: 1.0
       resolution: 0.05
@@ -211,8 +211,8 @@ bt_navigator:
   ros__parameters:
     use_sim_time: false
     global_frame: map
-    robot_base_frame: base_link
-    odom_topic: /diff_drive_controller/odom
+    robot_base_frame: base_footprint
+    odom_topic: /odom
     bt_loop_duration: 10
     default_server_timeout: 20
     plugin_lib_names:
@@ -248,7 +248,7 @@ behavior_server:
   ros__parameters:
     use_sim_time: false
     global_frame: map
-    robot_base_frame: base_link
+    robot_base_frame: base_footprint
     costmap_topic: local_costmap/costmap_raw
     footprint_topic: local_costmap/published_footprint
     cycle_frequency: 10.0
@@ -281,7 +281,7 @@ velocity_smoother:
     min_velocity: [-0.15, 0.0, -0.3]
     max_accel: [0.5, 0.0, 0.5]
     max_decel: [-0.5, 0.0, -0.5]
-    odom_topic: "/diff_drive_controller/odom"
+    odom_topic: "/odom"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
@@ -296,4 +296,4 @@ lifecycle_manager_navigation:
   ros__parameters:
     use_sim_time: false
     autostart: true
-    node_names: ["controller_server", "planner_server", "behavior_server", "bt_navigator", "waypoint_follower"]
+    node_names: ["controller_server", "planner_server", "behavior_server", "bt_navigator", "waypoint_follower", "velocity_smoother"]

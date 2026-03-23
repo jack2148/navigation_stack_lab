@@ -32,6 +32,8 @@ amcl:
     set_initial_pose: false
     sigma_hit: 0.2
     tf_broadcast: true
+    # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
+    # (네트워크나 CPU 부하로 인한 일시적인 메시지 누락 방지)
     transform_tolerance: 1.5
     update_min_a: 0.2
     update_min_d: 0.2
@@ -109,7 +111,6 @@ controller_server:
       min_speed_xy: 0.0
       max_speed_xy: 0.15
       min_speed_theta: 0.0
-      transform_tolerance: 1.5
 
       acc_lim_x: 0.5
       acc_lim_y: 0.0
@@ -146,6 +147,8 @@ local_costmap:
   local_costmap:
     ros__parameters:
       use_sim_time: false
+      # Costmap 파트에서도 TF-Scan 간의 지연 상황을 허용하도록 대기 시간 추가
+      transform_tolerance: 1.5
       global_frame: odom
       robot_base_frame: base_footprint
       update_frequency: 5.0
@@ -180,6 +183,8 @@ global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: false
+      # Costmap 파트에서도 TF-Scan 간의 지연 상황을 허용하도록 대기 시간 추가
+      transform_tolerance: 1.5
       global_frame: map
       robot_base_frame: base_footprint
       update_frequency: 1.0
@@ -243,6 +248,12 @@ bt_navigator:
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
       - nav2_remove_passed_goals_action_bt_node
+      - nav2_single_trigger_bt_node
+      - nav2_is_path_valid_condition_bt_node
+      - nav2_globally_updated_goal_condition_bt_node
+      - nav2_is_battery_low_condition_bt_node
+      - nav2_navigate_through_poses_action_bt_node
+      - nav2_navigate_to_pose_action_bt_node
 
 bt_navigator_rclcpp_node:
   ros__parameters:

@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
+from launch_ros.actions import PushRosNamespace, SetRemap
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 import os
@@ -13,6 +14,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+
+        SetRemap('/cmd_vel', '/diff_drive_controller/cmd_vel/unstamped'),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),
             launch_arguments={

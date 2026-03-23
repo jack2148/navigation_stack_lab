@@ -18,7 +18,8 @@ def generate_launch_description():
             launch_arguments={
                 'map': '/home/chan/maps/map_v2_test.yaml',
                 'use_sim_time': 'false',
-                'params_file': '/home/chan/navigation_stack_lab/ws_robot/src/robot_base/config/nav2_params.yaml'
+                'params_file': '/home/chan/navigation_stack_lab/ws_robot/src/robot_base/config/nav2_params.yaml',
+                'use_velocity_smoother': 'True'  # <--- 이 구문을 반드시 추가해야 합니다!
             }.items()
         )
     ])

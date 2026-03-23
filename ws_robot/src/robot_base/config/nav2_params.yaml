@@ -248,6 +248,12 @@ bt_navigator:
       - nav2_time_expired_condition_bt_node
       - nav2_path_expiring_timer_condition
       - nav2_remove_passed_goals_action_bt_node
+      - nav2_single_trigger_bt_node
+      - nav2_is_path_valid_condition_bt_node
+      - nav2_globally_updated_goal_condition_bt_node
+      - nav2_is_battery_low_condition_bt_node
+      - nav2_navigate_through_poses_action_bt_node
+      - nav2_navigate_to_pose_action_bt_node
 
 bt_navigator_rclcpp_node:
   ros__parameters:

@@ -10,7 +10,9 @@ def generate_launch_description():
         executable='async_slam_toolbox_node',
         name='slam_toolbox',
         output= 'screen',
-        parameters=[slam_params_file]
+        parameters=[
+            slam_params_file    
+        ]
     )
 
     return LaunchDescription([

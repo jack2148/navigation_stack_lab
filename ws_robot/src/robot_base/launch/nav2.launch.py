@@ -1,11 +1,15 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
-from launch_ros.actions import PushRosNamespace, SetRemap
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from ament_index_python.packages import get_package_share_directory
-import os
+from launch_ros.actions import SetRemap
 
 def generate_launch_description():
+    pkg_share = get_package_share_directory('robot_base')
+    nav2_params_file = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
+    map_file = os.path.join(os.path.expanduser('~'),
+                            'ws_robot/src/robot base/maps/my_map.yaml')   # 실제 파일명에 맞게
 
     nav2_launch = os.path.join(
         get_package_share_directory('nav2_bringup'),
@@ -14,16 +18,14 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-
-        SetRemap('/cmd_vel', '/diff_drive_controller/cmd_vel/unstamped'),
+        SetRemap('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped'),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),
             launch_arguments={
-                'map': '/home/chan/maps/map_v2_test.yaml',
                 'use_sim_time': 'false',
-                'params_file': '/home/chan/navigation_stack_lab/ws_robot/src/robot_base/config/nav2_params.yaml',
-                'use_velocity_smoother': 'True'
-            }.items()
+                'params_file': nav2_params_file,
+                'map': map_file
+                }.items()
         )
     ])

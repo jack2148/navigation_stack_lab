@@ -47,10 +47,7 @@ def generate_launch_description():
         executable="spawner",
         arguments=["diff_drive_controller", "--controller-manager", "/controller_manager"],
         output="screen",
-        remappings=[
-            ("/diff_drive_controller/odom", "/odom"),
-            ("/diff_drive_controller/cmd_vel", "/cmd_vel")
-        ]
+
     )
 
     # ---------- YDLIDAR 파라미터 파일 로드 ----------

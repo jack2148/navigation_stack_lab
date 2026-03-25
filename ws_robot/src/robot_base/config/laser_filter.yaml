@@ -7,6 +7,10 @@ laser_filter:
       params:
         use_message_range_limits: false
         lower_threshold: 0.3
+<<<<<<< HEAD
         upper_threshold: 25.0
+=======
+        upper_threshold: 10.0
+>>>>>>> 0ead885 (change prams for queue error : fix scan range , odom_topic:diff~/odom)
         lower_replacement_value: inf
         upper_replacement_value: inf

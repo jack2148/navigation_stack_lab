@@ -2,9 +2,9 @@ slam_toolbox:
   ros__parameters:
 
     #시간동기 해결
-    transform_timeout: 0.2
-    tf_buffer_duration: 30.0
-    scan_queue_size: 10
+    transform_timeout: 0.5
+    tf_buffer_duration: 60.0
+    scan_queue_size: 20
 
     #setting
     use_sim_time: false
@@ -12,5 +12,5 @@ slam_toolbox:
     #safety
     minimum_travel_distance: 0.01
     minimum_travel_heading: 0.01
-    map_update_interval: 0.3
+    map_update_interval: 0.5
 

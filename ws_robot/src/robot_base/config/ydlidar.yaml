@@ -16,6 +16,6 @@ ydlidar_ros2_driver_node:
     intensity: false
     support_motor_dtr: false
     range_max: 25.0
-    range_min: 0.1
+    range_min: 0.3
     frequency: 10.0
     invalid_range_is_inf: true

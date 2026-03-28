@@ -35,7 +35,7 @@ install(TARGETS robot_base_hw
   RUNTIME DESTINATION bin
 )
 
-install(DIRECTORY launch config urdf
+install(DIRECTORY launch config urdf maps
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -53,11 +53,7 @@ amcl_rclcpp_node:
 map_server:
   ros__parameters:
     use_sim_time: false
-<<<<<<< HEAD
-    yaml_filename: "/home/chan/navigation_stack_lab/ws_robot/src/robot_base/maps/my_map.yaml"
-=======
     yaml_filename: ""
->>>>>>> 0ead885 (change prams for queue error : fix scan range , odom_topic:diff~/odom)
 
 map_saver:
   ros__parameters:
@@ -165,8 +161,8 @@ local_costmap:
       plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.1
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.3
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: false
@@ -217,8 +213,8 @@ global_costmap:
           obstacle_min_range: 0.05
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.1
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.3
       always_send_full_costmap: true
 
 bt_navigator:

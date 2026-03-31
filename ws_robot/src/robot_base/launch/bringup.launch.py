@@ -82,50 +82,21 @@ def generate_launch_description():
         name="ebimu_publisher",
         output="screen",
         parameters=[
-            {"port": "/dev/ttyUSB0"},
+            {"port": "/dev/ttyUSB1"},
             {"baudrate": 115200}
         ]
     )
 
     # ---------- EKF 노드 (robot_localization) ----------
-    # 로직: 휠 오도메트리(Wheel)와 IMU 센서 데이터를 융합(Fusion)하여 더 정확한 Odom을 계산합니다.
+    # 로직: 휠 오도메트리와 IMU 센서 데이터를 융합하여 base_footprint TF를 발행합니다.
+    ekf_yaml_path = os.path.join(pkg_share, "config", "ekf.yaml")
+    
     ekf_node = Node(
         package="robot_localization",
         executable="ekf_node",
         name="ekf_filter_node",
         output="screen",
-        parameters=[
-            {"use_sim_time": False},
-            {"frequency": 30.0},
-            {"sensor_timeout": 0.1},
-            {"two_d_mode": True}, # 2D 평면을 주행하므로 True
-            {"publish_tf": True},
-            {"map_frame": "map"},
-            {"odom_frame": "odom"},
-            {"base_link_frame": "base_footprint"}, # 로봇 URDF의 최하단 링크
-            {"world_frame": "odom"},
-
-            # 1. 휠 오도메트리 파라미터 연동
-            # diff_drive_controller에서 나오는 초기 odom 값 사용
-            {"odom0": "/diff_drive_controller/odom"},
-            # [X, Y, Z, Roll, Pitch, Yaw, Vx, Vy, Vz, Vroll, Vpitch, Vyaw, Ax, Ay, Az]
-            # X, Y 위치와 V_x, V_yaw 속도만 주로 신뢰합니다.
-            {"odom0_config": [True,  True,  False,
-                              False, False, True,
-                              True,  False, False,
-                              False, False, True,
-                              False, False, False]},
-                              
-            # 2. IMU 데이터 파라미터 연동
-            # 센서에서 직접 퍼블리시한 IMU 데이터 경로
-            {"imu0": "/imu/data"},
-            # IMU는 주로 방향(Yaw)과 각속도(Vyaw)에 강점이 있으므로 그 부분을 신뢰합니다.
-            {"imu0_config": [False, False, False,
-                             False, False, True,
-                             False, False, False,
-                             False, False, True,
-                             False, False, False]},
-        ]
+        parameters=[ekf_yaml_path]
     )
 
     return LaunchDescription([

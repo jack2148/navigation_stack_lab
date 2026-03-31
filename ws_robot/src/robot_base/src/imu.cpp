@@ -19,9 +19,6 @@ class EbimuPublisher : public rclcpp::Node
 public:
     EbimuPublisher() : Node("ebimu_publisher")
     {
-        // ---------------- ROS 2 파라미터 선언 영역 ----------------
-        // 로직: launch 파일에서 값을 주입받을 수 있도록 파라미터를 선언하고 읽어옵니다.
-        // 왜?: 터미널에서 cin으로 입력받는 방식은 런치(launch) 파일에서 다른 노드들과 백그라운드로 켤 때 문제를 일으킵니다.
         this->declare_parameter("port", "/dev/ttyUSB1");
         this->declare_parameter("baudrate", 115200);
 

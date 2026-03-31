@@ -165,7 +165,7 @@ local_costmap:
         inflation_radius: 0.3
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: false
+        enabled: true
         observation_sources: scan
         scan:
           topic: /scan
@@ -199,7 +199,7 @@ global_costmap:
         lethal_cost_threshold: 80
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: false
+        enabled: true
         observation_sources: scan
         scan:
           topic: /scan

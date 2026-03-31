@@ -10,14 +10,12 @@ ydlidar_ros2_driver_node:
     abnormal_check_count: 4
     fixed_resolution: false
     reversion: true
-    inverted: true
+    inverted: false
     auto_reconnect: true
     isSingleChannel: false
     intensity: false
     support_motor_dtr: false
-    angle_max: 180.0
-    angle_min: -180.0
     range_max: 25.0
-    range_min: 0.1
+    range_min: 0.3
     frequency: 10.0
-    invalid_range_is_inf: false
+    invalid_range_is_inf: true

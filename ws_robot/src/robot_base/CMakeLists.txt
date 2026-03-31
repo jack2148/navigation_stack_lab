@@ -51,7 +51,7 @@ install(TARGETS imu_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY launch config urdf
+install(DIRECTORY launch config urdf maps
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -20,7 +20,7 @@ def generate_launch_description():
         raise e
 
     # 2. 파라미터 파일 경로 설정
-    #    (slam_chan/config/ydlidar.yaml 파일을 기본값으로 사용)
+    #    (config/ydlidar.yaml 파일을 기본값으로 사용)
     parameter_file = LaunchConfiguration('params_file')
     
     # config 폴더 내의 ydlidar.yaml 경로를 정확히 지정

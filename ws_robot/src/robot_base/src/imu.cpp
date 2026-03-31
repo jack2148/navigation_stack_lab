@@ -72,8 +72,8 @@ private:
         cfsetispeed(&options, speed);
         cfsetospeed(&options, speed);
 
-        options.c_cflag |= (CLOCAL | CREAD | CS8);
         options.c_cflag &= ~(PARENB | CSTOPB | CSIZE);
+        options.c_cflag |= (CLOCAL | CREAD | CS8);
         options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
 
         tcsetattr(serial_fd_, TCSANOW, &options);
@@ -142,8 +142,19 @@ private:
 
                     imu_msg.orientation.w = cr * cp * cy + sr * sp * sy;
                     imu_msg.orientation.x = sr * cp * cy - cr * sp * sy;
-                    imu_msg.orientation.y = cr * sp * cy + sr * cp * cy;
+                    imu_msg.orientation.y = cr * sp * cy + sr * cp * sy;
                     imu_msg.orientation.z = cr * cp * sy - sr * sp * cy;
+
+                    imu_msg.orientation_covariance.fill(0.0);
+                    imu_msg.angular_velocity_covariance.fill(0.0);
+                    imu_msg.linear_acceleration_covariance.fill(0.0);
+
+                    imu_msg.orientation_covariance[0] = 99999.0;
+                    imu_msg.orientation_covariance[4] = 99999.0;
+                    imu_msg.orientation_covariance[8] = 0.02;
+
+                    imu_msg.angular_velocity_covariance[0] = -1.0;
+                    imu_msg.linear_acceleration_covariance[0] = -1.0;
 
                     // 선형 가속도, 각속도 데이터도 EBIMU 설정에 따라 넘어온다면 배열 인덱스를 통해 추가 할 수 있습니다.
 

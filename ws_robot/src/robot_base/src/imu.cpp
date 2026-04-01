@@ -130,7 +130,7 @@ private:
                     // EBIMU는 Degree로 값을 줍니다. ROS는 통상적으로 Radian 단위를 사용합니다.
                     double roll = parsed_data[0] * M_PI / 180.0;
                     double pitch = parsed_data[1] * M_PI / 180.0;
-                    double yaw = parsed_data[2] * M_PI / 180.0;
+                    double yaw = -parsed_data[2] * M_PI / 180.0;
 
                     // 오일러 각(Roll, Pitch, Yaw) -> 쿼터니언(Quaternion) 변환 공식 적용
                     double cy = cos(yaw * 0.5);

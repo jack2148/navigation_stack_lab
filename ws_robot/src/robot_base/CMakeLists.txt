@@ -51,6 +51,12 @@ install(TARGETS imu_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# --- 파이썬 스크립트 설치 경로 ---
+install(PROGRAMS
+  src/patrol_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 install(DIRECTORY launch config urdf maps
   DESTINATION share/${PROJECT_NAME}
 )

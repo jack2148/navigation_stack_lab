@@ -8,7 +8,7 @@ from launch_ros.actions import SetRemap
 def generate_launch_description():
     pkg_share = get_package_share_directory('robot_base')
     nav2_params_file = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
-    map_file = os.path.join(pkg_share, 'maps', 'final_map1.yaml')   # 실제 파일명에 맞게
+    map_file = os.path.join(pkg_share, 'maps', 'final_map11.yaml')   # 실제 파일명에 맞게
 
     nav2_launch = os.path.join(
         get_package_share_directory('nav2_bringup'),

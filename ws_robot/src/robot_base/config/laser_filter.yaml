@@ -7,6 +7,6 @@ laser_filter:
       params:
         use_message_range_limits: false
         lower_threshold: 0.35
-        upper_threshold: 4.0
+        upper_threshold: 10.0
         lower_replacement_value: .inf
         upper_replacement_value: .inf

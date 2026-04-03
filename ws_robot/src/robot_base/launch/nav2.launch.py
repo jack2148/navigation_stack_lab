@@ -16,6 +16,12 @@ def generate_launch_description():
         'bringup_launch.py'
     )
 
+    robot_pose_launch = os.path.join(
+        pkg_share,
+        'launch',
+        'robot_pose.launch.py'
+    )
+
     return LaunchDescription([
         SetRemap('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped'),
 
@@ -26,6 +32,11 @@ def generate_launch_description():
                 'params_file': nav2_params_file,
                 'map': map_file
                 }.items()
+        ),
+
+        # Nav2와 함께 로봇 포즈 브릿지 노드 자동 실행
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(robot_pose_launch)
         )
 
     ])

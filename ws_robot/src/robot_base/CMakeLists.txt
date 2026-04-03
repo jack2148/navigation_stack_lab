@@ -54,6 +54,7 @@ install(TARGETS imu_node
 # --- 파이썬 스크립트 설치 경로 ---
 install(PROGRAMS
   src/patrol_node.py
+  src/robot_pose_tf_bridge.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

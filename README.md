@@ -205,6 +205,14 @@ source install/setup.bash
 
 > 💡 **초기 위치 설정 (필수 단계):** RViz2 구동 직후 `2D Pose Estimate`를 눌러 로봇 초기 위치와 각도를 한 번 지정해 주어야 AMCL이 파티클을 초기화하며 방향을 잡습니다. 이후 `Nav2 Goal`을 찍어주면 주행을 시작합니다.
 
+### 11. 트러블슈팅 및 이슈 문서 (Troubleshooting Docs)
+프로젝트 개발 과정에서 겪은 주요 하드웨어 및 소프트웨어 이슈와 해결책은 아래 문서들을 참고해 주세요.
+- 📡 [Sensor Integration Issues (LiDAR 센서 이슈)](docs/sensor_issues.md)
+- 🛞 [Control & Encoder Issues (제어 및 인코더 이슈)](docs/control_and_encoder.md)
+- 🗺️ [TF and Frame Issues (좌표계 변환 이슈)](docs/tf_and_frame.md)
+- 🧩 [Mapping Issues (SLAM 맵 왜곡 이슈)](docs/mapping_issues.md)
+- 🚥 [Navigation Issues (경로 진동 및 잔상 한계 이슈)](docs/navigation_issues.md)
+
 
 ---
 <br/>
@@ -386,3 +394,11 @@ Use this to turn on the autonomous navigation algorithm based on a saved map.
 > 1) Right after launching RViz2, the robot does not know its initial position.  
 > 2) Click `2D Pose Estimate` to set the robot's initial position and orientation on the map (so AMCL can initialize properly).  
 > 3) Once the laser scan aligns tightly with the walls, use `Nav2 Goal` to set a destination and verify navigation.
+
+### 11. Troubleshooting & Issue Docs
+For major hardware and software issues encountered during development and their solutions, please refer to the detailed documents below.
+- 📡 [Sensor Integration Issues](docs/sensor_issues.md)
+- 🛞 [Control & Encoder Issues](docs/control_and_encoder.md)
+- 🗺️ [TF and Frame Issues](docs/tf_and_frame.md)
+- 🧩 [Mapping Issues](docs/mapping_issues.md)
+- 🚥 [Navigation Issues](docs/navigation_issues.md)

@@ -28,10 +28,18 @@ class PatrolNode(Node):
             self.waypoints_callback,
             10
         )
+        self.control_sub = self.create_subscription(
+            String,
+            '/gui/control_patrol',
+            self.control_callback,
+            10
+        )
         self.get_logger().info('GUI Waypoints 구독 시작: /gui/waypoints 토픽에서 대기 중...')
+        self.get_logger().info('GUI Control 구독 시작: /gui/control_patrol 토픽(stop/go) 대기 중...')
         
         # 주행 상태 확인을 위한 비동기 타이머 변수
         self.check_timer = None
+        self.is_running = True
 
     def yaw_to_quaternion(self, yaw_degree):
         yaw_rad = math.radians(yaw_degree)
@@ -78,6 +86,23 @@ class PatrolNode(Node):
         self.navigator.setInitialPose(initial_pose)
         self.get_logger().info(f'초기 위치 셋팅 완료: 맵 기준 X({self.initial_x}), Y({self.initial_y})')
 
+    def control_callback(self, msg):
+        """GUI에서 정지(stop)나 재개(go) 신호가 올 때 호출됩니다."""
+        cmd = msg.data.strip().lower()
+        if cmd == 'stop':
+            self.get_logger().warn('>>> [STOP] 명령 수신! 즉시 일반 순찰을 정지합니다.')
+            self.is_running = False
+            self.navigator.cancelTask()
+        elif cmd == 'go':
+            if not self.waypoints_world:
+                self.get_logger().error('>>> [GO] 명령 수신. 하지만 지정된 웨이포인트가 없어 출발할 수 없습니다.')
+                return
+            self.get_logger().info('>>> [GO] 명령 수신! 일반 순찰을 이어서 재개합니다.')
+            self.is_running = True
+            self.start_patrolling_async()
+        else:
+            self.get_logger().info(f'알 수 없는 제어 명령입니다: {cmd}')
+
     def waypoints_callback(self, msg):
         """GUI에서 std_msgs/String으로 전송한 JSON 메세지 수신 및 파싱 코어 로직"""
         self.get_logger().info(f'GUI 웨이포인트(JSON) 수신됨: {msg.data}')
@@ -95,6 +120,7 @@ class PatrolNode(Node):
                 new_waypoints.append((float(wp['x']), float(wp['y']), float(wp['yaw'])))
             
             self.waypoints_world = new_waypoints
+            self.is_running = True
             self.get_logger().info(f'총 {len(self.waypoints_world)}개의 웨이포인트 등록 성공. 비동기 주행을 시작합니다.')
             
             # 파싱 및 등록 완료되었으므로 바로 구동 명령
@@ -132,9 +158,17 @@ class PatrolNode(Node):
             
             result = self.navigator.getResult()
             if result == TaskResult.SUCCEEDED:
-                self.get_logger().info('모든 GUI 웨이포인트 순찰 주행을 완벽하게 완료했습니다! 다음 데이터를 기다립니다.')
+                self.get_logger().info('모든 GUI 웨이포인트 순찰 주행을 1회 완료했습니다!')
+                
+                # --- 무한루프 반복 순찰 분기 ---
+                if self.is_running:
+                    self.get_logger().info('>>> 휴식 없이 무한 반복 일반 순찰을 재시작합니다.')
+                    self.start_patrolling_async()
+                else:
+                    self.get_logger().info('>>> 정지(Stop) 상태이므로 사이클 종료 후 대기합니다.')
+                    
             elif result == TaskResult.CANCELED:
-                self.get_logger().warn('주행이 중도 캔슬되었습니다.')
+                self.get_logger().warn('주행이 새로운 명령 수달이나 정지(Stop) 명령에 의해 중도 취소되었습니다.')
             elif result == TaskResult.FAILED:
                 self.get_logger().error('주행 중 치명적인 문제가 발생해 실패했습니다.')
 

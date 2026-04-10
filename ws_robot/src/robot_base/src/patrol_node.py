@@ -26,7 +26,7 @@ class PatrolNode(Node):
         # ---------- GUI JSON 통신(Subscriber & Publisher) 설정 ----------
         self.subscription = self.create_subscription(
             String,
-            '/waypoint_json',
+            '/patrol/waypoints_json',
             self.waypoints_callback,
             10
         )
@@ -48,7 +48,7 @@ class PatrolNode(Node):
             10
         )
         
-        self.get_logger().info('GUI Waypoints 구독 시작: /waypoint_json 토픽')
+        self.get_logger().info('GUI Waypoints 구독 시작: /patrol/waypoints_json 토픽')
         self.get_logger().info('GUI Control 구독 시작: /patrol/command 토픽')
         self.get_logger().info('Capture Trigger 발행 시작: /patrol/capture_trigger 토픽')
         self.get_logger().info('Camera Control 구독 시작: /patrol/capture_done 토픽 (done 대기용)')
@@ -57,24 +57,25 @@ class PatrolNode(Node):
         self.goal_pose_pub = self.create_publisher(Pose2D, '/goal_pose_2d', 10)
         self.next_place_pub = self.create_publisher(String, '/next_place_id', 10)
         self.status_pub = self.create_publisher(String, '/robot_status', 10)
-        self.reload_pub = self.create_publisher(Empty, '/reload_waypoints', 10)
+        self.reload_pub = self.create_publisher(Empty, '/patrol/reload_waypoints', 10)
 
         # 주행 상태 확인 전용 변수
         self.check_timer = None
         self.is_running = True
-        self.is_returning_home = False  # [수정] 복귀 중인지 명시적으로 판단하는 상태 플래그
+        self.is_returning_home = False  # 복귀 중인지 판단하는 상태 플래그
+        self.is_waiting_for_waypoints = True # [신규] 웨이포인트 수신 대기 무한 루프 플래그 (초기 켜짐)
 
-        # 1초 주기로 무조건 쏘던 타이머는 제거하고 이벤트 발생 시 호출하는 방식으로 변경합니다.
+        # 1초 주기로 무조건 쏘던 타이머는 제거하고 이벤트 발생 시 배출하도록 변경
         # self.status_emit_timer = self.create_timer(1.0, self.publish_continuous_status)
         
-        # 기동 직후 1회성으로 웨이포인트 갱신을 부탁하는 타이머 (1.5초 뒤 1회 실행 후 자진 종료)
-        self.startup_reload_timer = self.create_timer(1.5, self._trigger_reload_once)
+        # JSON을 받을 때까지 주기적으로(3초마다) 서버를 두드리는 핑(Ping) 타이머 가동
+        self.reload_ping_timer = self.create_timer(3.0, self._publish_reload_continuous)
 
-    def _trigger_reload_once(self):
-        """서버 측에 최신 웨이포인트를 요구하는 트리거 발송"""
-        self.get_logger().info('>>> [기동 완료] 서버로 /reload_waypoints 트리거 발송!')
-        self.reload_pub.publish(Empty())
-        self.startup_reload_timer.cancel()
+    def _publish_reload_continuous(self):
+        """플래그가 켜져 있는 동안 무한히 서버 측에 웨이포인트를 달라고 핑을 보냅니다"""
+        if self.is_waiting_for_waypoints:
+            self.get_logger().info('>>> 웨이포인트(JSON)가 아직 없습니다. /patrol/reload_waypoints 트리거를 지속 핑(Ping) 요청합니다!')
+            self.reload_pub.publish(Empty())
 
     def publish_current_status(self):
         """명령, 갱신, 도달 등 '상태가 변경되었을 때만' 1회성으로 호출되는 퍼블리셔"""
@@ -234,6 +235,7 @@ class PatrolNode(Node):
             self.direction = 1 # 새 리스트를 받으면 늘 정방향으로 시작
             self.is_running = True
             self.is_returning_home = False
+            self.is_waiting_for_waypoints = False # [상태 변경] 무한 핑(Ping) 종료
             
             self.publish_current_status() # [상태 변경] 맵 리로드 후 0번 타겟 송출
             self.get_logger().info(f'총 {len(self.sorted_waypoints)}개의 웨이포인트 정렬 성공. 순차 주행 액션을 시작합니다.')
@@ -264,12 +266,14 @@ class PatrolNode(Node):
                 return
         elif self.current_wp_index < 0:
             if self.is_running:
-                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! 서버에 새로운 맵(reload)을 요청합니다.')
-                self.reload_pub.publish(Empty())
+                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! 서버에 새로운 맵(reload)을 무한 요청합니다.')
                 
-                # 새 웨이포인트(JSON)가 통신으로 도달할 때까지 로봇을 대기(Pause) 상태로 전환합니다.
+                # 새 웨이포인트(JSON)가 통신으로 도달할 때까지 로봇의 엔진을 내리고 무한 핑(Ping) 모드 진입
                 self.is_running = False
-                self.publish_current_status() # [상태 변경] 대기 모드 진입 송출
+                self.is_waiting_for_waypoints = True
+                
+                self.reload_pub.publish(Empty()) # 즉시 1회 발포
+                self.publish_current_status()    # [상태 변경] 대기 모드 진입 송출
                 return
             else:
                 return

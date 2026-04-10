@@ -16,30 +16,47 @@ class PatrolNode(Node):
         self.initial_y = 0.0
         self.initial_yaw = 0.0
 
-        # ---------- 변경: 하드코딩된 변수 빈 배열로 초기화 ----------
-        self.waypoints_world = []
+        # ---------- 리스트 하나씩 이동 및 캡처를 위한 변수 ----------
+        self.sorted_waypoints = []
+        self.current_wp_index = 0
+        self.direction = 1 # 1은 순방향(정순), -1은 역방향(역순)
         
         self.navigator = BasicNavigator()
 
-        # ---------- GUI JSON 통신(Subscriber) 설정 ----------
+        # ---------- GUI JSON 통신(Subscriber & Publisher) 설정 ----------
         self.subscription = self.create_subscription(
             String,
-            '/gui/waypoints',
+            '/waypoint_json',
             self.waypoints_callback,
             10
         )
         self.control_sub = self.create_subscription(
             String,
-            '/gui/control_patrol',
+            '/patrol/command',
             self.control_callback,
             10
         )
-        self.get_logger().info('GUI Waypoints 구독 시작: /gui/waypoints 토픽에서 대기 중...')
-        self.get_logger().info('GUI Control 구독 시작: /gui/control_patrol 토픽(stop/go) 대기 중...')
+        self.capture_pub = self.create_publisher(
+            String,
+            '/patrol/capture_trigger',
+            10
+        )
+        self.camera_sub = self.create_subscription(
+            String,
+            '/patrol/capture_done',
+            self.camera_callback,
+            10
+        )
+        
+        self.get_logger().info('GUI Waypoints 구독 시작: /waypoint_json 토픽')
+        self.get_logger().info('GUI Control 구독 시작: /patrol/command 토픽')
+        self.get_logger().info('Capture Trigger 발행 시작: /patrol/capture_trigger 토픽')
+        self.get_logger().info('Camera Control 구독 시작: /patrol/capture_done 토픽 (done 대기용)')
         
         # 주행 상태 확인을 위한 비동기 타이머 변수
         self.check_timer = None
         self.is_running = True
+        self.is_returning_home = False  # [수정] 복귀 중인지 명시적으로 판단하는 상태 플래그
 
     def yaw_to_quaternion(self, yaw_degree):
         yaw_rad = math.radians(yaw_degree)
@@ -47,27 +64,7 @@ class PatrolNode(Node):
         qw = math.cos(yaw_rad / 2.0)
         return qz, qw
 
-    def generate_poses(self):
-        """실제 좌표 리스트를 바로 Nav2 액션용 PoseStamped 배열로 포장"""
-        poses = []
-        for (x, y, desired_yaw) in self.waypoints_world:
-            qz, qw = self.yaw_to_quaternion(desired_yaw)
-            
-            pose = PoseStamped()
-            pose.header.frame_id = 'map'
-            pose.header.stamp = self.navigator.get_clock().now().to_msg()
-            
-            pose.pose.position.x = float(x)
-            pose.pose.position.y = float(y)
-            
-            pose.pose.orientation.x = 0.0
-            pose.pose.orientation.y = 0.0
-            pose.pose.orientation.z = qz
-            pose.pose.orientation.w = qw
-            
-            poses.append(pose)
-            
-        return poses
+    # (생략) generate_poses는 이제 단일 좌표(goToPose)를 사용하므로 삭제했습니다.
 
     def set_initial_pose(self):
         """맵 상의 절대 좌표 기준으로 내 로봇이 현재 어디있는지 세팅"""
@@ -86,91 +83,205 @@ class PatrolNode(Node):
         self.navigator.setInitialPose(initial_pose)
         self.get_logger().info(f'초기 위치 셋팅 완료: 맵 기준 X({self.initial_x}), Y({self.initial_y})')
 
+    def camera_callback(self, msg):
+        """카메라 촬영 및 서버 송신 완료 후 발송되는 명령 수신부"""
+        try:
+            status, received_place_id = msg.data.strip().split(":", 1)
+            status = status.strip().lower()
+            received_place_id = received_place_id.strip()
+        except ValueError:
+            self.get_logger().error(f'잘못된 카메라 통신 포맷입니다 ("status:place_id" 형태 필요): {msg.data}')
+            return
+            
+        if status == 'done':
+            if not self.is_running:
+                self.get_logger().warn(f'카메라 완료({received_place_id}) 신호가 왔으나, 로봇 제어가 일시 정지(Pause) 상태라 대기합니다.')
+                return
+                
+            # 현재 대기중인 웨이포인트의 place_id와 일치하는지 교차 검증 보완
+            if self.sorted_waypoints and self.current_wp_index < len(self.sorted_waypoints):
+                current_place_id = self.sorted_waypoints[self.current_wp_index].get("place_id", "Unknown")
+                if received_place_id != current_place_id:
+                    self.get_logger().warn(f'수신된 완료 ID({received_place_id})가 현재 목표({current_place_id})와 다릅니다! 하지만 일단 진행합니다.')
+
+            self.get_logger().info(f'>>> [촬영 완료] {received_place_id} 처리 성공! 다음 인덱스로 순차 이동할게요!')
+            self.current_wp_index += self.direction
+            self.start_patrolling_async()
+        else:
+            self.get_logger().info(f'카메라에서 done이 아닌 다른 상태를 보냈습니다: {status}')
+
     def control_callback(self, msg):
-        """GUI에서 정지(stop)나 재개(go) 신호가 올 때 호출됩니다."""
+        """GUI에서 제어 신호가 올 때 호출됩니다."""
         cmd = msg.data.strip().lower()
-        if cmd == 'stop':
-            self.get_logger().warn('>>> [STOP] 명령 수신! 즉시 일반 순찰을 정지합니다.')
+        if cmd == 'pause_patrol':
+            self.get_logger().warn('>>> [PAUSE] 명령 수신! 즉시 일반 순찰을 정지합니다.')
             self.is_running = False
             self.navigator.cancelTask()
-        elif cmd == 'go':
-            if not self.waypoints_world:
-                self.get_logger().error('>>> [GO] 명령 수신. 하지만 지정된 웨이포인트가 없어 출발할 수 없습니다.')
+        elif cmd == 'start_patrol':
+            if not self.sorted_waypoints:
+                self.get_logger().error('>>> [START] 명령 수신. 하지만 지정된 웨이포인트가 없어 출발할 수 없습니다.')
                 return
-            self.get_logger().info('>>> [GO] 명령 수신! 일반 순찰을 이어서 재개합니다.')
+            self.get_logger().info('>>> [START] 명령 수신! 일반 순찰을 이어서 시작/재개합니다.')
             self.is_running = True
+            self.is_returning_home = False
             self.start_patrolling_async()
+        elif cmd == 'return_to_charge' or cmd == 'retrun_to_charge':
+            self.get_logger().info('>>> [RETURN] 복귀 명령 수신! 충전소(0,0,0)로 복귀합니다.')
+            self.is_running = False
+            self.is_returning_home = True
+            self.navigator.cancelTask()
+            self.return_to_origin()
         else:
             self.get_logger().info(f'알 수 없는 제어 명령입니다: {cmd}')
 
+    def return_to_origin(self):
+        """원점(0,0,0)으로 단일 이동 명령을 전송합니다."""
+        self.navigator.waitUntilNav2Active()
+        qz, qw = self.yaw_to_quaternion(0.0)
+        
+        pose = PoseStamped()
+        pose.header.frame_id = 'map'
+        pose.header.stamp = self.navigator.get_clock().now().to_msg()
+        pose.pose.position.x = 0.0
+        pose.pose.position.y = 0.0
+        pose.pose.orientation.z = qz
+        pose.pose.orientation.w = qw
+        
+        self.get_logger().info('원점 복귀 주행을 요청했습니다.')
+        self.navigator.goToPose(pose)
+        
+        if self.check_timer is not None:
+            self.check_timer.cancel()
+        self.check_timer = self.create_timer(1.0, self.check_navigation_status)
+
     def waypoints_callback(self, msg):
-        """GUI에서 std_msgs/String으로 전송한 JSON 메세지 수신 및 파싱 코어 로직"""
-        self.get_logger().info(f'GUI 웨이포인트(JSON) 수신됨: {msg.data}')
+        """GUI에서 전송한 새로운 포맷 JSON 수신 및 순차 로직"""
+        self.get_logger().info('GUI 웨이포인트 JSON 수신됨')
+        
+        # [방어 로직] 진행 중이던 기존 주행 목표를 깔끔하게 파기(Abort)하여 충돌 방지
+        if not self.navigator.isTaskComplete():
+            self.get_logger().info('기존 주행 태스크가 발견되어 초기화 취소(Cancel)를 진행합니다.')
+            self.navigator.cancelTask()
+            
         try:
-            # JSON 파싱
             data = json.loads(msg.data)
+            places = data.get("places", [])
             
-            # 들어온 데이터가 배열 형식인지 단일 객체인지 검사 후 배열로 통일
-            if isinstance(data, dict):
-                data = [data]
+            if not places:
+                self.get_logger().error('JSON 데이터 내부에 "places" 배열이 비어있습니다.')
+                return
                 
-            new_waypoints = []
-            for wp in data:
-                # 필수 필드가 보장되어 있는지 확인 (x, y, yaw)
-                new_waypoints.append((float(wp['x']), float(wp['y']), float(wp['yaw'])))
+            # JSON 내의 patrol_order 값 기준으로 배열을 오름차순 정렬합니다.
+            places.sort(key=lambda wp: int(wp.get("patrol_order", 0)))
             
-            self.waypoints_world = new_waypoints
+            self.sorted_waypoints = places
+            self.current_wp_index = 0
+            self.direction = 1 # 새 리스트를 받으면 늘 정방향으로 시작
             self.is_running = True
-            self.get_logger().info(f'총 {len(self.waypoints_world)}개의 웨이포인트 등록 성공. 비동기 주행을 시작합니다.')
+            self.is_returning_home = False
             
-            # 파싱 및 등록 완료되었으므로 바로 구동 명령
+            self.get_logger().info(f'총 {len(self.sorted_waypoints)}개의 웨이포인트 정렬 성공. 순차 주행 액션을 시작합니다.')
             self.start_patrolling_async()
             
         except json.JSONDecodeError:
-            self.get_logger().error('JSON 파싱 에러: GUI 데이터가 올바른 JSON 문자열 포맷이 아닙니다.')
-        except KeyError as e:
-            self.get_logger().error(f'파라미터 누락 에러: {e}. "x", "y", "yaw" 키가 JSON 내에 반드시 포함되어야 합니다.')
+            self.get_logger().error('JSON 파싱 에러: 올바른 JSON 포맷이 아닙니다.')
         except Exception as e:
             self.get_logger().error(f'웨이포인트 처리 중 예상치 못한 에러: {e}')
 
     def start_patrolling_async(self):
-        """블로킹 없이 비동기적으로 Nav2에 순찰 명령을 내리는 함수"""
-        if not self.waypoints_world:
-            self.get_logger().warn('등록된 웨이포인트가 없습니다!')
+        """현재 순서(index)의 단일 웨이포인트로 목적지 설정 및 발차"""
+        if not self.sorted_waypoints:
+            self.get_logger().warn('등록된 로컬 웨이포인트가 없습니다!')
             return
+            
+        n_wps = len(self.sorted_waypoints)
+        # 배열을 넘기지 않기 위해 정방향/역방향 양쪽 끝단 초과 여부를 감지하여 방향 전환(핑퐁)
+        if self.current_wp_index >= n_wps:
+            if self.is_running:
+                self.get_logger().info('마지막 타겟 도달 완료! 역순으로 주행 방향을 뒤집어 되돌아갑니다.')
+                self.direction = -1
+                self.current_wp_index = n_wps - 2
+                
+                if self.current_wp_index < 0:
+                    self.current_wp_index = 0
+            else:
+                return
+        elif self.current_wp_index < 0:
+            if self.is_running:
+                self.get_logger().info('첫번째 타겟 도달 완료! 다시 정순서로 주행 방향을 뒤집어 출발합니다.')
+                self.direction = 1
+                self.current_wp_index = 1
+                
+                if self.current_wp_index >= n_wps:
+                    self.current_wp_index = 0
+            else:
+                return
 
-        waypoints = self.generate_poses()
-        self.get_logger().info('Nav2 서버 (goThroughPoses)로 목표 타겟 리스트를 전송합니다...')
+        wp = self.sorted_waypoints[self.current_wp_index]
+        place_id = wp.get("place_id", "Unknown")
+        target_x = float(wp.get("x", 0.0))
+        target_y = float(wp.get("y", 0.0))
+        target_yaw = float(wp.get("yaw", 0.0))
         
-        # 무한 루프 대신 1회 비동기 액션 목표 전송
-        self.navigator.goThroughPoses(waypoints)
+        qz, qw = self.yaw_to_quaternion(target_yaw)
         
-        # 액션 골(목표)이 전송되었으니 진행 상황을 스레드를 멈추지 않고 확인하기 위해 타이머 생성
+        pose = PoseStamped()
+        pose.header.frame_id = 'map'
+        pose.header.stamp = self.navigator.get_clock().now().to_msg()
+        pose.pose.position.x = target_x
+        pose.pose.position.y = target_y
+        pose.pose.orientation.z = qz
+        pose.pose.orientation.w = qw
+        
+        self.get_logger().info(f'-> [출발] {self.current_wp_index+1}번째 타겟({place_id}) 이동 중...')
+        
+        # [수정] 콜드 부팅 시 첫 목표가 무시되지 않도록 Nav2 준비 보장
+        self.navigator.waitUntilNav2Active()
+        
+        # goThroughPoses대신 단일 목적지 goToPose를 호출해 각각 멈추도록 유도
+        self.navigator.goToPose(pose)
+        
         if self.check_timer is not None:
             self.check_timer.cancel()
         self.check_timer = self.create_timer(1.0, self.check_navigation_status)
 
     def check_navigation_status(self):
-        """1초에 한번씩 콜백 방식으로 주행 완료 여부 체크"""
+        """단일 지점 도착 여부 체크"""
         if self.navigator.isTaskComplete():
             self.check_timer.cancel()
             self.check_timer = None
             
             result = self.navigator.getResult()
             if result == TaskResult.SUCCEEDED:
-                self.get_logger().info('모든 GUI 웨이포인트 순찰 주행을 1회 완료했습니다!')
+                # 1. 원점 복귀 성공 분기
+                if self.is_returning_home:
+                    self.get_logger().info('>>> [복귀 완료] 원점(충전소) 복귀가 성공적으로 완료되었습니다. 명령을 대기합니다.')
+                    self.is_returning_home = False  # 안전을 위해 상태 해제
+                    return
+
+                # 2. 일반 목적지 순찰 성공 분기
+                if not self.sorted_waypoints:
+                    return
+
+                completed_wp = self.sorted_waypoints[self.current_wp_index]
+                place_id = completed_wp.get("place_id", "Origin_or_Unknown")
                 
-                # --- 무한루프 반복 순찰 분기 ---
-                if self.is_running:
-                    self.get_logger().info('>>> 휴식 없이 무한 반복 일반 순찰을 재시작합니다.')
-                    self.start_patrolling_async()
-                else:
-                    self.get_logger().info('>>> 정지(Stop) 상태이므로 사이클 종료 후 대기합니다.')
+                self.get_logger().info(f'>>> [완벽 도착] {place_id} 위치에 부드럽게 정차했습니다.')
+                
+                # 2. 도착 후 사진 캡처용 트리거 퍼블리시
+                trigger_msg = String()
+                trigger_msg.data = place_id
+                self.capture_pub.publish(trigger_msg)
+                self.get_logger().info(f'-> [발행됨] 캡처 트리거 이벤트 전송 완료: {place_id}')
+                self.get_logger().info(f'>>> 카메라 측의 /patrol/capture_done ("done:{place_id}") 통신을 무기한 대기합니다...')
+                
+                # 기존 로직: 도착 즉시 current_wp_index += 1 후 출발이었으나, 
+                # 이제는 여기서 완전히 멈춰서 무한 대기하며 camera_callback이 호출될 때까지 대기합니다.
                     
             elif result == TaskResult.CANCELED:
-                self.get_logger().warn('주행이 새로운 명령 수달이나 정지(Stop) 명령에 의해 중도 취소되었습니다.')
+                self.get_logger().warn('주행이 중도 취소되거나 Pause 되었습니다.')
             elif result == TaskResult.FAILED:
-                self.get_logger().error('주행 중 치명적인 문제가 발생해 실패했습니다.')
+                self.get_logger().error('주행 중 치명적인 문제가 발생해 이동 실패했습니다.')
 
 def main(args=None):
     rclpy.init(args=args)

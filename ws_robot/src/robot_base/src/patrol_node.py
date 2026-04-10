@@ -64,8 +64,8 @@ class PatrolNode(Node):
         self.is_running = True
         self.is_returning_home = False  # [수정] 복귀 중인지 명시적으로 판단하는 상태 플래그
 
-        # 1초 주기로 상태를 지속 송출하는 타이머 가동
-        self.status_emit_timer = self.create_timer(1.0, self.publish_continuous_status)
+        # 1초 주기로 무조건 쏘던 타이머는 제거하고 이벤트 발생 시 호출하는 방식으로 변경합니다.
+        # self.status_emit_timer = self.create_timer(1.0, self.publish_continuous_status)
         
         # 기동 직후 1회성으로 웨이포인트 갱신을 부탁하는 타이머 (1.5초 뒤 1회 실행 후 자진 종료)
         self.startup_reload_timer = self.create_timer(1.5, self._trigger_reload_once)
@@ -76,8 +76,8 @@ class PatrolNode(Node):
         self.reload_pub.publish(Empty())
         self.startup_reload_timer.cancel()
 
-    def publish_continuous_status(self):
-        """1초마다 GUI로 넘겨줄 상태/위치/ID 정보 퍼블리셔"""
+    def publish_current_status(self):
+        """명령, 갱신, 도달 등 '상태가 변경되었을 때만' 1회성으로 호출되는 퍼블리셔"""
         # 1. /robot_status 상태 전송
         status_msg = String()
         if self.is_returning_home:
@@ -157,6 +157,7 @@ class PatrolNode(Node):
 
             self.get_logger().info(f'>>> [촬영 완료] {received_place_id} 처리 성공! 다음 인덱스로 순차 이동할게요!')
             self.current_wp_index += self.direction
+            self.publish_current_status() # [상태 변경] 다음 타겟으로 갱신되었으므로 1회 송출
             self.start_patrolling_async()
         else:
             self.get_logger().info(f'카메라에서 done이 아닌 다른 상태를 보냈습니다: {status}')
@@ -168,6 +169,7 @@ class PatrolNode(Node):
             self.get_logger().warn('>>> [PAUSE] 명령 수신! 즉시 일반 순찰을 정지합니다.')
             self.is_running = False
             self.navigator.cancelTask()
+            self.publish_current_status() # [상태 변경] 정지 송출
         elif cmd == 'start_patrol':
             if not self.sorted_waypoints:
                 self.get_logger().error('>>> [START] 명령 수신. 하지만 지정된 웨이포인트가 없어 출발할 수 없습니다.')
@@ -175,11 +177,13 @@ class PatrolNode(Node):
             self.get_logger().info('>>> [START] 명령 수신! 일반 순찰을 이어서 시작/재개합니다.')
             self.is_running = True
             self.is_returning_home = False
+            self.publish_current_status() # [상태 변경] 순찰 중 송출
             self.start_patrolling_async()
         elif cmd == 'return_to_charge' or cmd == 'retrun_to_charge':
             self.get_logger().info('>>> [RETURN] 복귀 명령 수신! 충전소(0,0,0)로 복귀합니다.')
             self.is_running = False
             self.is_returning_home = True
+            self.publish_current_status() # [상태 변경] 복귀 중 송출
             self.navigator.cancelTask()
             self.return_to_origin()
         else:
@@ -231,6 +235,7 @@ class PatrolNode(Node):
             self.is_running = True
             self.is_returning_home = False
             
+            self.publish_current_status() # [상태 변경] 맵 리로드 후 0번 타겟 송출
             self.get_logger().info(f'총 {len(self.sorted_waypoints)}개의 웨이포인트 정렬 성공. 순차 주행 액션을 시작합니다.')
             self.start_patrolling_async()
             
@@ -259,12 +264,13 @@ class PatrolNode(Node):
                 return
         elif self.current_wp_index < 0:
             if self.is_running:
-                self.get_logger().info('첫번째 타겟 도달 완료! 다시 정순서로 주행 방향을 뒤집어 출발합니다.')
-                self.direction = 1
-                self.current_wp_index = 1
+                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! 서버에 새로운 맵(reload)을 요청합니다.')
+                self.reload_pub.publish(Empty())
                 
-                if self.current_wp_index >= n_wps:
-                    self.current_wp_index = 0
+                # 새 웨이포인트(JSON)가 통신으로 도달할 때까지 로봇을 대기(Pause) 상태로 전환합니다.
+                self.is_running = False
+                self.publish_current_status() # [상태 변경] 대기 모드 진입 송출
+                return
             else:
                 return
 
@@ -308,6 +314,7 @@ class PatrolNode(Node):
                 if self.is_returning_home:
                     self.get_logger().info('>>> [복귀 완료] 원점(충전소) 복귀가 성공적으로 완료되었습니다. 명령을 대기합니다.')
                     self.is_returning_home = False  # 안전을 위해 상태 해제
+                    self.publish_current_status()   # [상태 변경] 대기(일시 정지) 강등 상태 송출
                     return
 
                 # 2. 일반 목적지 순찰 성공 분기

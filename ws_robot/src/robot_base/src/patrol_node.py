@@ -3,8 +3,8 @@ import math
 import json
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped, Pose2D
+from std_msgs.msg import String, Empty
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 class PatrolNode(Node):
@@ -53,10 +53,62 @@ class PatrolNode(Node):
         self.get_logger().info('Capture Trigger 발행 시작: /patrol/capture_trigger 토픽')
         self.get_logger().info('Camera Control 구독 시작: /patrol/capture_done 토픽 (done 대기용)')
         
-        # 주행 상태 확인을 위한 비동기 타이머 변수
+        # ---------- 상태 지속 퍼블리시 및 갱신용 노드 추가 ----------
+        self.goal_pose_pub = self.create_publisher(Pose2D, '/goal_pose_2d', 10)
+        self.next_place_pub = self.create_publisher(String, '/next_place_id', 10)
+        self.status_pub = self.create_publisher(String, '/robot_status', 10)
+        self.reload_pub = self.create_publisher(Empty, '/reload_waypoints', 10)
+
+        # 주행 상태 확인 전용 변수
         self.check_timer = None
         self.is_running = True
         self.is_returning_home = False  # [수정] 복귀 중인지 명시적으로 판단하는 상태 플래그
+
+        # 1초 주기로 상태를 지속 송출하는 타이머 가동
+        self.status_emit_timer = self.create_timer(1.0, self.publish_continuous_status)
+        
+        # 기동 직후 1회성으로 웨이포인트 갱신을 부탁하는 타이머 (1.5초 뒤 1회 실행 후 자진 종료)
+        self.startup_reload_timer = self.create_timer(1.5, self._trigger_reload_once)
+
+    def _trigger_reload_once(self):
+        """서버 측에 최신 웨이포인트를 요구하는 트리거 발송"""
+        self.get_logger().info('>>> [기동 완료] 서버로 /reload_waypoints 트리거 발송!')
+        self.reload_pub.publish(Empty())
+        self.startup_reload_timer.cancel()
+
+    def publish_continuous_status(self):
+        """1초마다 GUI로 넘겨줄 상태/위치/ID 정보 퍼블리셔"""
+        # 1. /robot_status 상태 전송
+        status_msg = String()
+        if self.is_returning_home:
+            status_msg.data = "충전소 복귀 중"
+        elif not self.is_running:
+            status_msg.data = "순찰 일시 정지"
+        else:
+            status_msg.data = "순찰 중"
+        self.status_pub.publish(status_msg)
+
+        # 2. /goal_pose_2d 와 /next_place_id 전송
+        goal_msg = Pose2D()
+        id_msg = String()
+        
+        if self.is_returning_home:
+            id_msg.data = "충전소(Origin)"
+            goal_msg.x = 0.0
+            goal_msg.y = 0.0
+            goal_msg.theta = 0.0
+            self.next_place_pub.publish(id_msg)
+            self.goal_pose_pub.publish(goal_msg)
+            
+        elif self.sorted_waypoints and self.current_wp_index < len(self.sorted_waypoints):
+            wp = self.sorted_waypoints[self.current_wp_index]
+            id_msg.data = wp.get("place_id", "Unknown")
+            goal_msg.x = float(wp.get("x", 0.0))
+            goal_msg.y = float(wp.get("y", 0.0))
+            goal_msg.theta = float(wp.get("yaw", 0.0))
+            
+            self.next_place_pub.publish(id_msg)
+            self.goal_pose_pub.publish(goal_msg)
 
     def yaw_to_quaternion(self, yaw_degree):
         yaw_rad = math.radians(yaw_degree)
@@ -64,7 +116,6 @@ class PatrolNode(Node):
         qw = math.cos(yaw_rad / 2.0)
         return qz, qw
 
-    # (생략) generate_poses는 이제 단일 좌표(goToPose)를 사용하므로 삭제했습니다.
 
     def set_initial_pose(self):
         """맵 상의 절대 좌표 기준으로 내 로봇이 현재 어디있는지 세팅"""

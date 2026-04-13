@@ -132,7 +132,7 @@ controller_server:
       stateful: true
 
       critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      ObstacleFootprint.scale: 32.0
+      ObstacleFootprint.scale: 25.0
       PathAlign.scale: 8.0
       PathAlign.forward_point_distance: 0.4
       GoalAlign.scale: 8.0
@@ -162,7 +162,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.0
-        inflation_radius: 0.8
+        inflation_radius: 0.5
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: true
@@ -215,7 +215,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 1.0
-        inflation_radius: 0.6
+        inflation_radius: 0.5
       always_send_full_costmap: true
 
 bt_navigator:

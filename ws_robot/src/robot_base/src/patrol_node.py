@@ -111,8 +111,9 @@ class PatrolNode(Node):
             self.next_place_pub.publish(id_msg)
             self.goal_pose_pub.publish(goal_msg)
 
-    def yaw_to_quaternion(self, yaw_degree):
-        yaw_rad = math.radians(yaw_degree)
+    def yaw_to_quaternion(self, yaw_rad):
+        # GUI에서 저장한 값은 /robot_pose(단위: 라디안)에서 왔으므로 degree 가 아닌 라디안(rad)입니다.
+        # math.radians(yaw_degree)를 다시 하지 않고 바로 변환합니다.
         qz = math.sin(yaw_rad / 2.0)
         qw = math.cos(yaw_rad / 2.0)
         return qz, qw

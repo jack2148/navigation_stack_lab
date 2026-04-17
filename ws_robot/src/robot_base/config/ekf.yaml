@@ -19,9 +19,9 @@ ekf_filter_node:
                    
     imu0: /imu/data
     imu0_config: [false, false, false,
-                  false, false, true,  # Yaw (절대 방향 값)
+                  false, false, false, # Yaw (절대 방향 값 사용 안 함)
                   false, false, false,
-                  false, false, false,  # VYaw (자이로스코프: 회전 각속도)
+                  false, false, true,  # VYaw (자이로스코프: 회전 각속도 사용)
                   false,  false,  false] # 선형 가속도
     
-    imu0_relative: false
+    imu0_relative: true

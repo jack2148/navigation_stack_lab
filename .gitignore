@@ -8,7 +8,7 @@ ws_robot/src/ydlidar_ros2_driver/
 **/*.db3
 **/*.mcap
 **/*.bag
-experiments/runs/
+experiments/
 datasets/
 data/
 

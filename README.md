@@ -3,38 +3,34 @@
 ## 🚀 Key Features
 
 **[🇰🇷 KR]**
-- ROS2 Nav2 기반 자율주행 파이프라인 구축 (Mapping → Localization → Navigation)
-- Waypoint 기반 순찰 로봇 시스템 구현 (Event-triggered navigation)
-- EKF 기반 LiDAR + Odometry + IMU 센서 융합
-- Local Planner (DWB → MPPI) 성능 비교 실험 설계
-- 실제 환경(복도/사람 장애물) 기반 반복 실험 수행 예정
+- ✅ ROS2 Nav2 기반 자율주행 파이프라인 구축 (Mapping → Localization → Navigation)
+- ✅ DWB Local Planner 기반 주행 검증 성공
+- ✅ MPPI(Model Predictive Path Integral) 마이그레이션 및 기본 주행 완료 (파라미터 최적화)
+- 🔄 DWB vs MPPI 성능 비교 실험 설계 및 수행 예정
+- ⏳ Waypoint 기반 순찰 로봇 시스템 고도화 (Event-triggered navigation)
 
 **[🇺🇸 EN]**
-- Established ROS2 Nav2-based autonomous navigation pipeline
-- Implemented waypoint-based patrol robot system
-- EKF-based sensor fusion (LiDAR + Odometry + IMU)
-- Performance comparison experiment design for Local Planners (DWB vs MPPI)
-- Scheduled repeated experiments in real-world environments (corridors/human obstacles)
+- ✅ Established ROS2 Nav2-based autonomous navigation pipeline
+- ✅ Successfully validated navigation with DWB Local Planner
+- ✅ Completed MPPI (Model Predictive Path Integral) migration and basic driving
+- 🔄 Designing and conducting DWB vs MPPI performance comparison experiments
+- ⏳ Enhancing waypoint-based patrol robot system
 
 ## 💡 Key Contributions & Problem Solving (핵심 문제 해결 및 성과)
 
 이 저장소는 단순한 튜토리얼 구현을 넘어, 실제 모바일 로봇에서 발행하는 **센서 데이터 오차 분석과 제어기 한계 돌파(Troubleshooting) 과정**을 가장 중요하게 다루고 있습니다.
 
-**[🇰🇷 KR] 핵심 성과 및 트러블슈팅 요약**
-1. **센서 융합 최적화 및 IMU Drift 오차 해결** 👉 [상세 과정 보기(Docs)](docs/imu_and_pose_issues.md)
-   - 주행 중 110도 Yaw 뒤틀림 현상 및 Lidar 기반 AMCL과 Odometry 간의 지속적인 10도 위치 오차 문제를 포착.
-   - Python 기반 오차 분석 스크립트(`analyze_true_error.py`)를 직접 작성하여 ROSbag 에러를 정량화하고, EKF(확장 칼만 필터) 파라미터 공분산 튜닝을 통해 오차를 완벽 보정.
-2. **DWB 제어기 한계 극복 및 MPPI 최신 제어기 도입** 👉 [상세 과정 보기(Docs)](docs/navigation_issues.md)
-   - 로컬 플래너(DWB) 사용 시 목표 지점에서 발생하는 극심한 주행 진동(Oscillation) 및 Costmap 장애물 잔상 문제를 발견.
-   - 노이즈 필터링(`laser_filter`) 및 파라미터 최적화를 수행했으며, 근본적 알고리즘 한계를 넘기 위해 최신 샘플링 기반 경로 예측 제어기인 **MPPI(Model Predictive Path Integral)로 마이그레이션하여 주행 안정성을 대폭 상향**시킴.
+**[🇰🇷 KR] 핵심 성과 및 트러블슈팅 세부 기록**
+- 이 프로젝트는 성공적인 주행 결과뿐만 아니라, 그 과정에서 마주한 기술적 한계를 데이터로 분석하고 해결한 과정을 중요하게 다룹니다.
+- 📡 [센서 이슈 & IMU Drift 해결 과정](docs/imu_and_pose_issues.md): Yaw 오차 분석 및 EKF 튜닝
+- 🚥 [내비게이션 진동 및 잔상 해결](docs/navigation_issues.md): DWB 한계 극복 및 MPPI 마이그레이션
+- 🗺️ [SLAM 맵 왜곡 및 변환 문제](docs/mapping_issues.md): TF 트리 및 맵 품질 최적화
 
-**[🇺🇸 EN] Key Troubleshooting Summary**
-1. **Sensor Fusion & IMU Drift Correction** 👉 [Read Details](docs/imu_and_pose_issues.md)
-   - Identified severe yaw misalignment (up to 110°) and a persistent 10° discrepancy between AMCL and Odometry during autonomous navigation.
-   - Developed custom Python tracking scripts to extract precise error metrics, successfully neutralizing long-term drift by retuning EKF covariance parameters.
-2. **Overcoming DWB Limitations & MPPI Migration** 👉 [Read Details](docs/navigation_issues.md)
-   - Resolved severe oscillation near goals and costmap ghost-obstacle anomalies intrinsic to the basic DWB planner.
-   - Overcame these limitations by implementing robust laser filtering and migrating the entire local navigation stack to the advanced **MPPI (Model Predictive Path Integral) algorithm**, realizing smooth trajectory execution.
+**[🇺🇸 EN] Key Contributions & Troubleshooting Case Studies**
+- This project highlights the data-driven troubleshooting process over simple implementation.
+- 📡 [Sensor Fusion & IMU Drift Correction](docs/imu_and_pose_issues.md): Error quantification and EKF retuning
+- 🚥 [Overcoming Path Oscillation](docs/navigation_issues.md): DWB limitations and MPPI migration
+- 🗺️ [Resolving Map Distortions](docs/mapping_issues.md): TF tree integrity and SLAM quality optimization
 
 👉 Choose your language: **[🇰🇷 Korean (한국어)](#-korean-version)** | **[🇺🇸 English](#-english-version)**
 
@@ -107,10 +103,9 @@ graph TD
 - ✅ EKF 기반 센서 융합 구성
 - ✅ `slam_toolbox`를 활용한 2D 맵 생성
 - ✅ 저장된 맵 기반 Localization 구성
-- ✅ Nav2 Bringup 및 기본 Waypoint 주행 검증
-- 🔄 DWB 기반 실험을 위한 기본 내비게이션 프레임워크 준비
-- ⏳ DWB 반복 실험
-- ⏳ 정량적 플래너 비교
+- ✅ Nav2 Bringup 및 DWB 기반 주행 성공
+- ✅ MPPI 제어기 파라미터 튜닝 및 기본 주행 완료
+- 🔄 DWB vs MPPI 성능 정량 비교 실험 준비 중
 - ⏳ GUI / 상위 시스템 연동
 
 현재까지 기본적인 센서 연동, 상태 추정, 맵 생성, Localization, Waypoint 주행까지의 End-to-End 파이프라인이 구축되었습니다. 특히 Nav2 Bringup 이후 저장된 맵을 기반으로 Waypoint 주행이 가능한 상태까지 확인하였으며, 현재는 DWB 반복 실험 직전 단계에 있습니다. 이후에는 반복 주행 실험과 Planner 비교를 통해 성능을 정량적으로 분석할 예정입니다.
@@ -132,21 +127,22 @@ graph TD
 
 *(Note: 아래 플레이스홀더에 실제 이미지/영상 주소를 교체해주세요)*
 
-**📸 주요 이미지**
-1. **Robot Hardware:** 풀 세팅 로봇 사진 (LiDAR, IMU, PC)
-2. **Sensor Mounting:** 센서 장착부 근접 샷
-3. **Generated Map:** 생성된 2D 점유 격자 지도 (Occupancy Map)
-4. **Mapping Process:** 생성 중인 슬램 스캔 및 TF 트리 (RViz2)
-5. **Localization/Navigation:** 맵, 로봇 위치, 경로, 코스트맵 현황 (RViz2)
-6. **Waypoint Navigation:** 목적지 이동 모식도
-7. **System Structure:** 전체 `rqt_graph` 토픽 맵
-8. **Experimental Setup:** 복도, 좁은 틈새 등 실제 주행 테스트 환경 사진
+### 7. 현재까지의 결과 및 미디어 (Gallery)
 
-**🎥 시연 비디오**
-- 맵핑(Mapping) 진행 영상
-- Localization 기반 워이포인트 주행 영상
-- 본 실험 돌입 전 기본 회피 주행 테스트 영상
-- 동일 경로 반복 주행 영상
+> [!NOTE]
+> 하드웨어 및 맵 사진은 실물 촬영 후 내일 업데이트될 예정입니다.
+
+#### 📸 시스템 스냅샷
+| 로봇 하드웨어 (Full Setup) | 센서 장착부 (Jetson/LiDAR) |
+| :---: | :---: |
+| ![Robot](https://via.placeholder.com/400x300?text=Hardware+Photo+Here) | ![Sensor](https://via.placeholder.com/400x300?text=Sensor+Mounting+Here) |
+| **SLAM 맵 생성 결과 (2D Map)** | **Nav2 주행 모니터링 (RViz)** |
+| ![Map](https://via.placeholder.com/400x300?text=Generated+Map+Here) | ![Nav](https://via.placeholder.com/400x300?text=Navigation+Screen+Here) |
+
+#### 🎥 시연 비디오
+- [ ] **맵핑(Mapping)**: 복도 환경 SLAM 과정 (영상 링크 예정)
+- [ ] **자율 주행**: MPPI 기반 Waypoint 주행 시연 (영상 링크 예정)
+- [ ] **트러블슈팅**: DWB 진동 현상 및 MPPI 개선 비교 (영상 링크 예정)
 
 ### 8. 실험 계획
 
@@ -165,27 +161,22 @@ graph TD
 - **Phase 2 (통제된 인간 간섭):** 사람이 동일 위치/타이밍에 앞을 가로막은 채 정지/회피 양상 비교
 - **Phase 3 (플래너 튜닝):** DWB 파라미터(진동 감쇠, 회피 품질) 조정 후, MPPI 적용 비교
 
-### 9. 실험 항목 및 성능 지표
+### 9. 실험 항목 및 데이터 분석
 
 | 실험 항목 | 목적 | 성과 지표 |
 | :--- | :--- | :--- |
 | **반복 주행 평가** | 안정성 검증 | 성공률, 소요 시간, 궤적 편차 |
-| **파라미터 튜닝** | 통제 변인에 대한 민감도 검사 | 주행 진동 현상, 궤적 부드러움 |
-| **동적/협소 환경 테스트** | 실제 배치 가능성 검증 | 충돌 횟수, 리커버리(Recovery) 발생 빈도 |
-| **장기 운용 테스트** | 일관성(재현성) 확보 | 실험 간 편차 확인 |
+| **DWB vs MPPI 비교** | 플래너 특성 분석 | 주행 진동 현상, 궤적 부드러움 |
+| **동적/협소 환경 테스트** | 실제 배치 가능성 검증 | 충돌 횟수, 리커버리 발생 빈도 |
 
-**🛠️ 정량적 지표 (Quantitative Metrics)**
-- `Time-to-goal [s]`: 목표 도달 소요 시간
-- `Path length [m]`: 실제 주행 이동 거리
-- `Path deviation [m]`: 최적 경로 대비 횡방향 이탈 오차
-- `Collision / near-collision count`: 충돌 및 근접 위험 횟수
-- `Recovery behavior count`: 리커버리(스핀 등) 동작 발생 횟수
-- `Oscillation count`: 눈에 띄는 진동 또는 좌우 흔들림 발생 빈도
-- `Average linear velocity [m/s]`: 실제 경로상의 평균 선속도
-- `CPU usage [%]`: 주행 중 평균 연산 부하율
+#### 📊 데이터 기반 오차 분석 (Highlight)
+단순 주행 테스트에 그치지 않고, `analyze_true_error.py` 스크립트를 통해 ROSbag 데이터를 정량 분석합니다.
+- **분석 도구**: Python, Matplotlib, ROS2 Bag API
+- **검증 항목**: AMCL Pose와 Filtered Odom 간의 유클리드 거리 및 Yaw 오차 산출
+- **결과**: EKF 파라미터 조정 전 10도 이상의 Yaw 오차를 정밀하게 포착하여 개선 근거로 활용.
 
-> **💡 실험의 기저 방향:**  
-> 사람이나 장애물이 막는 상황은 이론적으로 부드럽게 피할 것을 기대하지만, **실제로는 진동, 급정지, 우회 실패, 리커버리 지연** 현상이 잦습니다. 이 **'기대(Theory)'와 '현상(Behavior)' 간의 차이를 기록**하여 최적의 튜닝 포인트를 찾아내는 것이 우리의 목표입니다.
+> **💡 기술적 인사이트:**  
+> 이론적인 회피 동작과 실제 로봇의 물리적 거동 사이의 간극(Gap)을 데이터로 증명하고, 이를 통해 최적의 제어기 파라미터를 도출하는 과정을 본 프로젝트의 핵심 역량으로 삼고 있습니다.
 
 ### 10. 실행 튜토리얼 (How to Run)
 
@@ -294,10 +285,9 @@ The following components have been implemented or prepared so far:
 - ✅ EKF-based sensor fusion configuration
 - ✅ 2D map generation using `slam_toolbox`
 - ✅ Localization setup based on a saved map
-- ✅ Nav2 bringup and verification of basic waypoint navigation
-- 🔄 Basic navigation framework prepared for DWB-based experiments
-- ⏳ Repeated DWB experiments
-- ⏳ Quantitative planner comparison
+- ✅ Nav2 Bringup and successful DWB-based navigation
+- ✅ MPPI controller parameter tuning and basic driving completed
+- 🔄 Preparing for DWB vs MPPI quantitative performance comparison
 - ⏳ GUI / higher-level system integration
 
 At the current stage, the end-to-end pipeline from sensor integration to localization and waypoint navigation has been established. Waypoint-based navigation on a saved map has already been verified, and the project is now at the stage immediately before repeated DWB experiments. The next step is to conduct repeated runs and compare planners using quantitative metrics.

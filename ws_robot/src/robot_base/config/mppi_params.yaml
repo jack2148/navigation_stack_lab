@@ -80,7 +80,7 @@ controller_server:
     odom_topic: /odometry/filtered
     use_sim_time: false
     transform_tolerance: 0.5
-    controller_frequency: 15.0
+    controller_frequency: 10.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.0
     min_theta_velocity_threshold: 0.001
@@ -102,16 +102,17 @@ controller_server:
 
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 56
-      model_dt: 0.05
-      batch_size: 2000
+      time_steps: 30
+      model_dt: 0.1
+      batch_size: 800
       vx_std: 0.2
-      vy_std: 0.2
-      vtheta_std: 0.4
+      vy_std: 0.0
+      wz_std: 0.4
       vx_max: 0.4
       vx_min: 0.0
       vy_max: 0.0
-      vtheta_max: 0.8
+      wz_max: 0.8
+      wz_min: -0.8
       iteration_count: 1
       prune_distance: 1.7
       transform_tolerance: 0.3

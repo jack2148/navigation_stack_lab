@@ -16,17 +16,25 @@
 - Performance comparison experiment design for Local Planners (DWB vs MPPI)
 - Scheduled repeated experiments in real-world environments (corridors/human obstacles)
 
-## 💡 Expected Contribution
+## 💡 Key Contributions & Problem Solving (핵심 문제 해결 및 성과)
 
-**[🇰🇷 KR]**
-- 실제 운용 환경에서 DWB와 MPPI의 정량적 성능 비교
-- 동적 장애물(사람 간섭) 발생 시 플래너(Planner)의 주행 양상 분석
-- 보안 로봇 시스템 실제 배치를 위한 실용적인 튜닝 인사이트 제공
+이 저장소는 단순한 튜토리얼 구현을 넘어, 실제 모바일 로봇에서 발행하는 **센서 데이터 오차 분석과 제어기 한계 돌파(Troubleshooting) 과정**을 가장 중요하게 다루고 있습니다.
 
-**[🇺🇸 EN]**
-- Quantitative comparison between DWB and MPPI in real-world environments
-- Analysis of planner behavior under dynamic obstacles (human interaction)
-- Practical tuning insights for deployment in security robot systems
+**[🇰🇷 KR] 핵심 성과 및 트러블슈팅 요약**
+1. **센서 융합 최적화 및 IMU Drift 오차 해결** 👉 [상세 과정 보기(Docs)](docs/imu_and_pose_issues.md)
+   - 주행 중 110도 Yaw 뒤틀림 현상 및 Lidar 기반 AMCL과 Odometry 간의 지속적인 10도 위치 오차 문제를 포착.
+   - Python 기반 오차 분석 스크립트(`analyze_true_error.py`)를 직접 작성하여 ROSbag 에러를 정량화하고, EKF(확장 칼만 필터) 파라미터 공분산 튜닝을 통해 오차를 완벽 보정.
+2. **DWB 제어기 한계 극복 및 MPPI 최신 제어기 도입** 👉 [상세 과정 보기(Docs)](docs/navigation_issues.md)
+   - 로컬 플래너(DWB) 사용 시 목표 지점에서 발생하는 극심한 주행 진동(Oscillation) 및 Costmap 장애물 잔상 문제를 발견.
+   - 노이즈 필터링(`laser_filter`) 및 파라미터 최적화를 수행했으며, 근본적 알고리즘 한계를 넘기 위해 최신 샘플링 기반 경로 예측 제어기인 **MPPI(Model Predictive Path Integral)로 마이그레이션하여 주행 안정성을 대폭 상향**시킴.
+
+**[🇺🇸 EN] Key Troubleshooting Summary**
+1. **Sensor Fusion & IMU Drift Correction** 👉 [Read Details](docs/imu_and_pose_issues.md)
+   - Identified severe yaw misalignment (up to 110°) and a persistent 10° discrepancy between AMCL and Odometry during autonomous navigation.
+   - Developed custom Python tracking scripts to extract precise error metrics, successfully neutralizing long-term drift by retuning EKF covariance parameters.
+2. **Overcoming DWB Limitations & MPPI Migration** 👉 [Read Details](docs/navigation_issues.md)
+   - Resolved severe oscillation near goals and costmap ghost-obstacle anomalies intrinsic to the basic DWB planner.
+   - Overcame these limitations by implementing robust laser filtering and migrating the entire local navigation stack to the advanced **MPPI (Model Predictive Path Integral) algorithm**, realizing smooth trajectory execution.
 
 👉 Choose your language: **[🇰🇷 Korean (한국어)](#-korean-version)** | **[🇺🇸 English](#-english-version)**
 

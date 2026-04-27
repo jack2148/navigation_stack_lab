@@ -3,9 +3,12 @@ import math
 import json
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, Pose2D
+from geometry_msgs.msg import PoseStamped, Pose2D, Twist, PointStamped
 from std_msgs.msg import String, Empty
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+
+import tf2_geometry_msgs
+from tf2_ros import Buffer, TransformListener
 
 class PatrolNode(Node):
     def __init__(self):
@@ -36,6 +39,31 @@ class PatrolNode(Node):
             self.control_callback,
             10
         )
+        self.tracking_sub = self.create_subscription(
+            String,
+            '/person_tracking/follow_state',
+            self.tracking_callback,
+            10
+        )
+        
+        # ---------- [추가] 사람 추적 제어 영역 ----------
+        # '왜': 상태 메시지 외에 좌표 수신과 차체 직접 제어를 위한 통신 확보
+        self.follow_target_sub = self.create_subscription(
+            PointStamped,
+            '/person_tracking/follow_target',
+            self.target_callback,
+            10
+        )
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        
+        self.tracking_state = 'IDLE'
+        self.safe_distance = 1.0  # 사람 추적 시 유지할 목표 이격 거리 (m)
+
+        # ---------- [추가] 카메라 좌표 -> 로봇 좌표(base_link) 변환용 TF2 리스너 세팅 ----------
+        # '왜': 카메라 위치와 로봇 중심의 물리적 오차를 상쇄하여, 로봇의 회전 제어 및 거리 제어를 완벽히 가운데 기준으로 맞추기 위함입니다
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         self.capture_pub = self.create_publisher(
             String,
             '/patrol/capture_trigger',
@@ -52,6 +80,7 @@ class PatrolNode(Node):
         self.get_logger().info('GUI Control 구독 시작: /patrol/command 토픽')
         self.get_logger().info('Capture Trigger 발행 시작: /patrol/capture_trigger 토픽')
         self.get_logger().info('Camera Control 구독 시작: /patrol/capture_done 토픽 (done 대기용)')
+        self.get_logger().info('Person Tracking Follow State 구독 시작: /person_tracking/follow_state 토픽')
         
         # ---------- 상태 지속 퍼블리시 및 갱신용 노드 추가 ----------
         self.goal_pose_pub = self.create_publisher(Pose2D, '/goal_pose_2d', 10)
@@ -345,6 +374,84 @@ class PatrolNode(Node):
                 self.get_logger().warn('주행이 중도 취소되거나 Pause 되었습니다.')
             elif result == TaskResult.FAILED:
                 self.get_logger().error('주행 중 치명적인 문제가 발생해 이동 실패했습니다.')
+
+    # ---------- 사람 추적(Person Tracking) 제어 메서드 영역 ----------
+    
+    def tracking_callback(self, msg):
+        """사람 추적 상태(IDLE, TRACKING, LOST) 변경 수신부"""
+        new_state = msg.data.strip().upper()
+        
+        if new_state == 'TRACKING' and self.tracking_state != 'TRACKING':
+            self.get_logger().warn('>>> [TRACKING] 사람 추적 모드 발동! 진행 중인 순찰(Nav2)을 강제 취소합니다.')
+            self.is_running = False
+            self.navigator.cancelTask()
+            self.publish_current_status()
+
+        elif new_state == 'LOST' and self.tracking_state != 'LOST':
+            self.get_logger().warn('>>> [LOST] 사람을 놓쳤습니다! GUI에 일시정지를 알리고 대기합니다.')
+            self.stop_robot()
+            # GUI에서 Pause명령을 내린 것과 동일한 처리
+            self.is_running = False
+            self.publish_current_status()
+
+        elif new_state == 'IDLE' and self.tracking_state != 'IDLE':
+            self.get_logger().info('>>> [IDLE] 대상 없음. 원래 순찰 경로로 복귀하여 자동으로 재출발합니다.')
+            self.stop_robot()
+            # GUI에서 Start명령을 내린 것과 동일한 처리
+            self.is_running = True
+            self.publish_current_status()
+            self.start_patrolling_async()
+            
+        self.tracking_state = new_state
+        
+    def stop_robot(self):
+        """명시적으로 속도를 0으로 설정하여 미끄러짐 방지"""
+        twist = Twist()
+        self.cmd_vel_pub.publish(twist)
+
+    def target_callback(self, msg):
+        """실시간(TRACKING) 사람 좌표 기준으로 P제어를 수행하여 로봇을 쫓아가게 하는 로직"""
+        # '왜': 카메라 오프셋으로 인한 조향/사각 오차를 제거하기 위해 base_link(차량 중심)로 좌표 자동 변환 후 직관적인 P제어를 적용
+        if self.tracking_state != 'TRACKING':
+            return
+            
+        # 1. 좌표계 변환 처리 (Camera Frame -> base_link Frame)
+        try:
+            # 수신받은 좌표의 원본 프레임(예: camera_color_optical_frame)에서 로봇 정중앙(base_link)으로의 물리적 거리 관계표 획득
+            t = self.tf_buffer.lookup_transform(
+                'base_link',
+                msg.header.frame_id,
+                rclpy.time.Time()
+            )
+            # 수신 받은 사람 좌표(PointStamped)를 로봇 본체 기준으로 자동 재계산(캘리브레이션) 적용!
+            transformed_msg = tf2_geometry_msgs.do_transform_point(msg, t)
+        except Exception as e:
+            self.get_logger().info(f'[TF2 변환 대기 중...] 로봇 중심 좌표계 캘리브레이션 지연: {e}')
+            return
+            
+        # 변환이 성공적으로 완료되었으므로, 이제부터 x는 완벽한 '정면' 거리, y는 왼쪽/오른쪽 '측면' 거리가 됩니다.
+        x_base = transformed_msg.point.x
+        y_base = transformed_msg.point.y
+        
+        twist = Twist()
+        
+        # 2. 시야각 조향 제어 (Angular z)
+        # 왼쪽(Y가 플러스)일 경우 좌회전(+각속도), 오른쪽(Y가 마이너스)일 경우 우회전(-각속도) 자동 성립! (표준 우수좌표계 규칙 적용)
+        error_yaw = math.atan2(y_base, x_base)
+        
+        # 속도 제한: 최대 회전 속도를 +- 0.8 rad/s 로 걸어 부드럽게 선회
+        twist.angular.z = max(-0.8, min(0.8, 1.2 * error_yaw))
+        
+        # 3. 거리 전진 제어 (Linear x)
+        if x_base > 0.0:
+            error_d = x_base - self.safe_distance
+            # 닿지 않게 목표 거리(1.0m)보다 멀 때만 전진. 거리가 멀수록 최대 0.4 m/s 까지 가속
+            if error_d > 0.1:
+                twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
+            else:
+                twist.linear.x = 0.0
+                
+        self.cmd_vel_pub.publish(twist)
 
 def main(args=None):
     rclpy.init(args=args)

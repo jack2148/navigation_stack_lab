@@ -100,7 +100,7 @@ controller_server:
       xy_goal_tolerance: 0.1
       yaw_goal_tolerance: 0.1
 
-    FollowPath:
+    FollowPath:`  
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: false
       min_vel_x: 0.0

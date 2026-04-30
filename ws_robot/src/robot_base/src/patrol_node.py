@@ -411,46 +411,37 @@ class PatrolNode(Node):
 
     def target_callback(self, msg):
         """실시간(TRACKING) 사람 좌표 기준으로 P제어를 수행하여 로봇을 쫓아가게 하는 로직"""
-        # '왜': 카메라 오프셋으로 인한 조향/사각 오차를 제거하기 위해 base_link(차량 중심)로 좌표 자동 변환 후 직관적인 P제어를 적용
         if self.tracking_state != 'TRACKING':
             return
-            
+
         # 1. 좌표계 변환 처리 (Camera Frame -> base_link Frame)
         try:
-            # 수신받은 좌표의 원본 프레임(예: camera_color_optical_frame)에서 로봇 정중앙(base_link)으로의 물리적 거리 관계표 획득
             t = self.tf_buffer.lookup_transform(
                 'base_link',
                 msg.header.frame_id,
                 rclpy.time.Time()
             )
-            # 수신 받은 사람 좌표(PointStamped)를 로봇 본체 기준으로 자동 재계산(캘리브레이션) 적용!
             transformed_msg = tf2_geometry_msgs.do_transform_point(msg, t)
         except Exception as e:
             self.get_logger().info(f'[TF2 변환 대기 중...] 로봇 중심 좌표계 캘리브레이션 지연: {e}')
             return
-            
-        # 변환이 성공적으로 완료되었으므로, 이제부터 x는 완벽한 '정면' 거리, y는 왼쪽/오른쪽 '측면' 거리가 됩니다.
+
+        # 변환 후 x=로봇 정면 거리, y=좌우 측면 거리
         x_base = transformed_msg.point.x
         y_base = transformed_msg.point.y
-        
+
         twist = Twist()
-        
-        # 2. 시야각 조향 제어 (Angular z)
-        # 왼쪽(Y가 플러스)일 경우 좌회전(+각속도), 오른쪽(Y가 마이너스)일 경우 우회전(-각속도) 자동 성립! (표준 우수좌표계 규칙 적용)
+
+        # 2. 조향 제어 (Angular z) - 최대 ±0.8 rad/s
         error_yaw = math.atan2(y_base, x_base)
-        
-        # 속도 제한: 최대 회전 속도를 +- 0.8 rad/s 로 걸어 부드럽게 선회
         twist.angular.z = max(-0.8, min(0.8, 1.2 * error_yaw))
-        
-        # 3. 거리 전진 제어 (Linear x)
+
+        # 3. 거리 전진 제어 (Linear x) - 사람 앞 safe_distance(1.0m) 정지
         if x_base > 0.0:
             error_d = x_base - self.safe_distance
-            # 닿지 않게 목표 거리(1.0m)보다 멀 때만 전진. 거리가 멀수록 최대 0.4 m/s 까지 가속
             if error_d > 0.1:
                 twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
-            else:
-                twist.linear.x = 0.0
-                
+
         self.cmd_vel_pub.publish(twist)
 
 def main(args=None):

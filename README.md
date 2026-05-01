@@ -1,7 +1,11 @@
 
 # Demo
 
+**MPPI — 장애물 앞에서 부드럽게 회피하며 주행**
+
 https://github.com/user-attachments/assets/f9c3c259-7703-4743-8fe3-fea5d009ca3b
+
+**DWB — 장애물에 가로막혀 정지**
 
 https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
 

@@ -29,11 +29,13 @@ amcl:
     robot_model_type: nav2_amcl::DifferentialMotionModel
     save_pose_rate: 0.5
     scan_topic: /scan
-    set_initial_pose: false
+    set_initial_pose: true       # mppi_params.yaml과 다른 부분
+    initial_pose_x: 0.0          # ← robot_pose의 x 값으로 교체
+    initial_pose_y: 0.0          # ← robot_pose의 y 값으로 교체
+    initial_pose_z: 0.0
+    initial_pose_yaw: 0.0        # ← robot_pose의 theta 값으로 교체
     sigma_hit: 0.2
     tf_broadcast: true
-    # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
-    # (네트워크나 CPU 부하로 인한 일시적인 메시지 누락 방지)
     transform_tolerance: 0.5
     update_min_a: 0.05
     update_min_d: 0.05
@@ -179,7 +181,6 @@ local_costmap:
   local_costmap:
     ros__parameters:
       use_sim_time: false
-      # Costmap 파트에서도 TF-Scan 간의 지연 상황을 허용하도록 대기 시간 추가
       transform_tolerance: 0.5
       global_frame: odom
       robot_base_frame: base_footprint
@@ -218,7 +219,6 @@ global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: false
-      # Costmap 파트에서도 TF-Scan 간의 지연 상황을 허용하도록 대기 시간 추가
       transform_tolerance: 0.5
       global_frame: map
       robot_base_frame: base_footprint

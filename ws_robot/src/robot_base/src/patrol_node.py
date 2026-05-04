@@ -12,11 +12,6 @@ class PatrolNode(Node):
     def __init__(self):
         super().__init__('patrol_node')
         
-        # ---------- [추가] 로봇이 켜질 때 고정된 시작 기준 좌표 (초기 위치) ----------
-        self.initial_x = 0.0
-        self.initial_y = 0.0
-        self.initial_yaw = 0.0
-
         # ---------- 리스트 하나씩 이동 및 캡처를 위한 변수 ----------
         self.sorted_waypoints = []
         self.current_wp_index = 0
@@ -142,23 +137,6 @@ class PatrolNode(Node):
         qw = math.cos(yaw_rad / 2.0)
         return qz, qw
 
-
-    def set_initial_pose(self):
-        """맵 상의 절대 좌표 기준으로 내 로봇이 현재 어디있는지 세팅"""
-        qz, qw = self.yaw_to_quaternion(self.initial_yaw)
-        
-        initial_pose = PoseStamped()
-        initial_pose.header.frame_id = 'map'
-        initial_pose.header.stamp = self.navigator.get_clock().now().to_msg()
-        initial_pose.pose.position.x = float(self.initial_x)
-        initial_pose.pose.position.y = float(self.initial_y)
-        initial_pose.pose.orientation.x = 0.0
-        initial_pose.pose.orientation.y = 0.0
-        initial_pose.pose.orientation.z = qz
-        initial_pose.pose.orientation.w = qw
-        
-        self.navigator.setInitialPose(initial_pose)
-        self.get_logger().info(f'초기 위치 셋팅 완료: 맵 기준 X({self.initial_x}), Y({self.initial_y})')
 
     def camera_callback(self, msg):
         """카메라 촬영 및 서버 송신 완료 후 발송되는 명령 수신부"""
@@ -427,6 +405,7 @@ class PatrolNode(Node):
                 self.auth_pub.publish(auth_msg)
                 self.auth_published = True
                 self.get_logger().info('[ARRIVED] /auth_ready published.')
+                self.publish_current_status()
             return
 
         twist = Twist()

@@ -137,6 +137,39 @@ IDLE 두 번째 진입 → 기존 타이머 cancel() → 새 타이머 생성 (2
 
 ---
 
+## 문제 3: controller_server 실행 실패 (costmap 미표시)
+
+### 증상
+- `bringup_nav` 실행 후 RViz2에서 초기 포즈 설정해도 costmap이 뜨지 않음
+- `ros2 topic list | grep costmap` 결과 토픽 없음
+- 터미널에 `Failed to bring up all requested nodes. Aborting bringup` 출력
+
+### 원인
+`controller_frequency`를 10Hz → 8Hz로 낮추면서 `model_dt`를 그대로 0.1로 둔 것이 원인.
+
+MPPI는 내부적으로 아래 조건을 검증합니다:
+```
+model_dt >= controller_period (= 1 / controller_frequency)
+```
+
+| 항목 | 값 |
+|---|---|
+| `controller_frequency` | 8.0 Hz |
+| controller period | 1 / 8.0 = **0.125초** |
+| `model_dt` | 0.1초 |
+| 조건 | 0.1 >= 0.125 → **위반** |
+
+### 해결
+`model_dt`를 `1 / controller_frequency`에 맞춰 수정:
+
+| 항목 | 전 | 후 |
+|---|---|---|
+| `model_dt` | 0.1 | 0.125 |
+
+> `controller_frequency`를 변경할 때는 반드시 `model_dt = 1 / controller_frequency` 로 맞춰야 합니다.
+
+---
+
 ## 추가 튜닝 여지
 
 - `batch_size`를 400까지 낮출 수 있으나 복잡한 장애물 환경에서는 경로 품질 저하 가능

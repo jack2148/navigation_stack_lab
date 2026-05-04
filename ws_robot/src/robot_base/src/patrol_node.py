@@ -53,6 +53,7 @@ class PatrolNode(Node):
         self.tracking_state = 'IDLE'
         self.safe_distance = 1.0  # 사람 추적 시 유지할 목표 이격 거리 (m)
         self.auth_published = False  # 도착 pub 중복 방지
+        self._resume_timer = None  # AMCL 수렴 대기 타이머
 
         self.capture_pub = self.create_publisher(
             String,
@@ -371,15 +372,23 @@ class PatrolNode(Node):
             self.publish_current_status()
 
         elif new_state == 'IDLE' and self.tracking_state != 'IDLE':
-            self.get_logger().info('>>> [IDLE] 대상 없음. 원래 순찰 경로로 복귀하여 자동으로 재출발합니다.')
+            self.get_logger().info('>>> [IDLE] 대상 없음. AMCL 수렴 대기(2초) 후 순찰 재개합니다.')
             self.stop_robot()
-            # GUI에서 Start명령을 내린 것과 동일한 처리
             self.is_running = True
             self.publish_current_status()
-            self.start_patrolling_async()
+            if self._resume_timer is not None:
+                self._resume_timer.cancel()
+            self._resume_timer = self.create_timer(2.0, self._resume_patrol_once)
             
         self.tracking_state = new_state
         
+    def _resume_patrol_once(self):
+        """AMCL 수렴 대기 후 1회 순찰 재개 (one-shot 타이머 콜백)"""
+        self._resume_timer.cancel()
+        self._resume_timer = None
+        self.navigator.clearLocalCostmap()
+        self.start_patrolling_async()
+
     def stop_robot(self):
         """명시적으로 속도를 0으로 설정하여 미끄러짐 방지"""
         twist = Twist()

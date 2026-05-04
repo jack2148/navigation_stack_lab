@@ -71,7 +71,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.5
+      tolerance: 0.1
       use_astar: false
       allow_unknown: true
 
@@ -97,7 +97,7 @@ controller_server:
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: true
-      xy_goal_tolerance: 0.1
+      xy_goal_tolerance: 0.05
       yaw_goal_tolerance: 0.1
 
     FollowPath:

@@ -7,8 +7,6 @@ from geometry_msgs.msg import PoseStamped, Pose2D, Twist, PointStamped
 from std_msgs.msg import String, Empty
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
-import tf2_geometry_msgs
-from tf2_ros import Buffer, TransformListener
 
 class PatrolNode(Node):
     def __init__(self):
@@ -58,11 +56,6 @@ class PatrolNode(Node):
         
         self.tracking_state = 'IDLE'
         self.safe_distance = 1.0  # 사람 추적 시 유지할 목표 이격 거리 (m)
-
-        # ---------- [추가] 카메라 좌표 -> 로봇 좌표(base_link) 변환용 TF2 리스너 세팅 ----------
-        # '왜': 카메라 위치와 로봇 중심의 물리적 오차를 상쇄하여, 로봇의 회전 제어 및 거리 제어를 완벽히 가운데 기준으로 맞추기 위함입니다
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.capture_pub = self.create_publisher(
             String,
@@ -414,33 +407,20 @@ class PatrolNode(Node):
         if self.tracking_state != 'TRACKING':
             return
 
-        # 1. 좌표계 변환 처리 (Camera Frame -> base_link Frame)
-        try:
-            t = self.tf_buffer.lookup_transform(
-                'base_link',
-                msg.header.frame_id,
-                rclpy.time.Time()
-            )
-            transformed_msg = tf2_geometry_msgs.do_transform_point(msg, t)
-        except Exception as e:
-            self.get_logger().info(f'[TF2 변환 대기 중...] 로봇 중심 좌표계 캘리브레이션 지연: {e}')
-            return
-
-        # 변환 후 x=로봇 정면 거리, y=좌우 측면 거리
-        x_base = transformed_msg.point.x
-        y_base = transformed_msg.point.y
+        # RealSense optical frame: z=전방 거리, x=좌우(오른쪽+)
+        forward = msg.point.z
+        lateral = -msg.point.x  # 카메라 오른쪽+ → 로봇 왼쪽+ 변환
 
         twist = Twist()
 
-        # 2. 조향 제어 (Angular z) - 최대 ±0.8 rad/s
-        error_yaw = math.atan2(y_base, x_base)
+        # 조향 제어 (Angular z) - 최대 ±0.8 rad/s
+        error_yaw = math.atan2(lateral, forward)
         twist.angular.z = max(-0.8, min(0.8, 1.2 * error_yaw))
 
-        # 3. 거리 전진 제어 (Linear x) - 사람 앞 safe_distance(1.0m) 정지
-        if x_base > 0.0:
-            error_d = x_base - self.safe_distance
-            if error_d > 0.1:
-                twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
+        # 거리 전진 제어 (Linear x) - safe_distance(1.0m) 앞에서 정지
+        error_d = forward - self.safe_distance
+        if error_d > 0.1:
+            twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
 
         self.cmd_vel_pub.publish(twist)
 

@@ -4,7 +4,7 @@ import json
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Pose2D, Twist, PointStamped
-from std_msgs.msg import String, Empty
+from std_msgs.msg import String, Empty, Bool
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 
@@ -53,9 +53,11 @@ class PatrolNode(Node):
             10
         )
         self.cmd_vel_pub = self.create_publisher(Twist, '/diff_drive_controller/cmd_vel', 10)
-        
+        self.auth_pub = self.create_publisher(Bool, '/auth_ready', 10)
+
         self.tracking_state = 'IDLE'
         self.safe_distance = 1.0  # 사람 추적 시 유지할 목표 이격 거리 (m)
+        self.auth_published = False  # 도착 pub 중복 방지
 
         self.capture_pub = self.create_publisher(
             String,
@@ -201,6 +203,8 @@ class PatrolNode(Node):
             self.get_logger().info('>>> [START] 명령 수신! 일반 순찰을 이어서 시작/재개합니다.')
             self.is_running = True
             self.is_returning_home = False
+            self.tracking_state = 'IDLE'  # target_callback이 Nav2 주행을 방해하지 않도록 초기화
+            self.auth_published = False
             self.publish_current_status() # [상태 변경] 순찰 중 송출
             self.start_patrolling_async()
         elif cmd == 'return_to_charge' or cmd == 'retrun_to_charge':
@@ -383,6 +387,7 @@ class PatrolNode(Node):
         elif new_state == 'LOST' and self.tracking_state != 'LOST':
             self.get_logger().warn('>>> [LOST] 사람을 놓쳤습니다! GUI에 일시정지를 알리고 대기합니다.')
             self.stop_robot()
+            self.auth_published = False
             # GUI에서 Pause명령을 내린 것과 동일한 처리
             self.is_running = False
             self.publish_current_status()
@@ -411,6 +416,19 @@ class PatrolNode(Node):
         forward = msg.point.z
         lateral = -msg.point.x  # 카메라 오른쪽+ → 로봇 왼쪽+ 변환
 
+        error_d = forward - self.safe_distance
+
+        # 도달 판정: safe_distance 이하로 진입
+        if error_d <= 0.1:
+            self.stop_robot()
+            if not self.auth_published:
+                auth_msg = Bool()
+                auth_msg.data = True
+                self.auth_pub.publish(auth_msg)
+                self.auth_published = True
+                self.get_logger().info('[ARRIVED] /auth_ready published.')
+            return
+
         twist = Twist()
 
         # 조향 제어 (Angular z) - 최대 ±0.8 rad/s
@@ -418,7 +436,6 @@ class PatrolNode(Node):
         twist.angular.z = max(-0.8, min(0.8, 1.2 * error_yaw))
 
         # 거리 전진 제어 (Linear x) - safe_distance(1.0m) 앞에서 정지
-        error_d = forward - self.safe_distance
         if error_d > 0.1:
             twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
 

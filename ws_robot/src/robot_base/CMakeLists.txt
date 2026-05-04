@@ -56,6 +56,7 @@ install(PROGRAMS
   src/mode_node.py
   src/patrol_node.py
   src/robot_pose_tf_bridge.py
+  src/tracking_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

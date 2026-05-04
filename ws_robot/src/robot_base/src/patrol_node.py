@@ -52,7 +52,7 @@ class PatrolNode(Node):
             self.target_callback,
             10
         )
-        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/diff_drive_controller/cmd_vel', 10)
         
         self.tracking_state = 'IDLE'
         self.safe_distance = 1.0  # 사람 추적 시 유지할 목표 이격 거리 (m)

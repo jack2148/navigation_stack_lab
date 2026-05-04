@@ -47,7 +47,7 @@ class PatrolNode(Node):
             self.target_callback,
             10
         )
-        self.cmd_vel_pub = self.create_publisher(Twist, '/diff_drive_controller/cmd_vel', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/diff_drive_controller/cmd_vel_unstamped', 10)
         self.auth_pub = self.create_publisher(Bool, '/auth_ready', 10)
 
         self.tracking_state = 'IDLE'

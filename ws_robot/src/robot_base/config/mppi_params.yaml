@@ -35,8 +35,8 @@ amcl:
     # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
     # (네트워크나 CPU 부하로 인한 일시적인 메시지 누락 방지)
     transform_tolerance: 0.5
-    update_min_a: 0.05
-    update_min_d: 0.05
+    update_min_a: 0.02
+    update_min_d: 0.02
     z_hit: 0.5
     z_max: 0.05
     z_rand: 0.2

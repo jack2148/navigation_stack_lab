@@ -173,7 +173,9 @@ class PatrolNode(Node):
         if cmd == 'pause_patrol':
             self.get_logger().warn('>>> [PAUSE] 명령 수신! 즉시 일반 순찰을 정지합니다.')
             self.is_running = False
+            self.is_waiting_for_waypoints = True
             self.navigator.cancelTask()
+            self.reload_pub.publish(Empty())
             self.publish_current_status() # [상태 변경] 정지 송출
         elif cmd == 'start_patrol':
             if not self.sorted_waypoints:
@@ -235,10 +237,18 @@ class PatrolNode(Node):
                 
             # JSON 내의 patrol_order 값 기준으로 배열을 오름차순 정렬합니다.
             places.sort(key=lambda wp: int(wp.get("patrol_order", 0)))
-            
+
+            # 기존 waypoint와 place_id 순서가 같으면 현재 인덱스 유지 (이어서 진행)
+            new_ids = [p.get("place_id") for p in places]
+            old_ids = [p.get("place_id") for p in self.sorted_waypoints]
+            if new_ids != old_ids:
+                self.current_wp_index = 0
+                self.direction = 1
+                self.get_logger().info('웨이포인트가 변경되어 처음부터 순찰을 시작합니다.')
+            else:
+                self.get_logger().info(f'웨이포인트가 동일합니다. {self.current_wp_index + 1}번 지점부터 이어서 순찰합니다.')
+
             self.sorted_waypoints = places
-            self.current_wp_index = 0
-            self.direction = 1 # 새 리스트를 받으면 늘 정방향으로 시작
             self.is_running = True
             self.is_returning_home = False
             self.is_waiting_for_waypoints = False # [상태 변경] 무한 핑(Ping) 종료
@@ -272,14 +282,10 @@ class PatrolNode(Node):
                 return
         elif self.current_wp_index < 0:
             if self.is_running:
-                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! 서버에 새로운 맵(reload)을 무한 요청합니다.')
-                
-                # 새 웨이포인트(JSON)가 통신으로 도달할 때까지 로봇의 엔진을 내리고 무한 핑(Ping) 모드 진입
-                self.is_running = False
-                self.is_waiting_for_waypoints = True
-                
-                self.reload_pub.publish(Empty()) # 즉시 1회 발포
-                self.publish_current_status()    # [상태 변경] 대기 모드 진입 송출
+                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! GUI pause 명령을 대기합니다.')
+                self.direction = 1
+                self.current_wp_index = 0
+                self.start_patrolling_async()
                 return
             else:
                 return

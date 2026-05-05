@@ -109,10 +109,10 @@ controller_server:
       plugin: "nav2_mppi_controller::MPPIController"
       time_steps: 30
       model_dt: 0.1
-      batch_size: 800
+      batch_size: 1500
       vx_std: 0.2
       vy_std: 0.0
-      wz_std: 0.1
+      wz_std: 0.15
       vx_max: 0.4
       vx_min: 0.0
       vy_max: 0.0
@@ -121,7 +121,7 @@ controller_server:
       iteration_count: 1
       prune_distance: 1.7
       transform_tolerance: 0.3
-      temperature: 0.15
+      temperature: 0.2
       gamma: 0.015
       motion_model: "DiffDrive"
       visualize: false

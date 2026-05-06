@@ -31,10 +31,10 @@ amcl:
     scan_topic: /scan
     set_initial_pose: true
     initial_pose:
-      x: -24.99
-      y: -30.65
+      x: 3.06
+      y: -0.57
       z: 0.0
-      yaw: 0.88
+      yaw: -0.63
     sigma_hit: 0.2
     tf_broadcast: true
     # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
@@ -102,7 +102,7 @@ controller_server:
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: true
-      xy_goal_tolerance: 0.1
+      xy_goal_tolerance: 0.2
       yaw_goal_tolerance: 0.1
 
     FollowPath:
@@ -118,7 +118,7 @@ controller_server:
       vy_max: 0.0
       wz_max: 0.8
       wz_min: -0.8
-      iteration_count: 1
+      iteration_count: 2
       prune_distance: 1.7
       transform_tolerance: 0.3
       temperature: 0.25
@@ -146,7 +146,7 @@ controller_server:
       GoalCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 8.0
+        cost_weight: 12.0
         threshold_to_consider: 1.4
       GoalAngleCritic:
         enabled: true
@@ -162,7 +162,7 @@ controller_server:
         cost_power: 1
         cost_weight: 10.0
         max_heuristic_cost: 3000.0
-        threshold_to_consider: 0.5
+        threshold_to_consider: 0.2
         offset_from_furthest: 20
         use_path_orientations: false
       PathFollowCritic:
@@ -176,7 +176,7 @@ controller_server:
         cost_power: 1
         cost_weight: 3.0
         offset_from_furthest: 4
-        threshold_to_consider: 0.5
+        threshold_to_consider: 0.2
         max_angle_to_prefer: 0.314
         forward_preference: true
 

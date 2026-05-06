@@ -31,12 +31,6 @@ amcl:
     scan_topic: /scan
     set_initial_pose: true
     initial_pose:
-      x: -25.0
-      y: -30.65
-      z: 0.0
-      yaw: 0.89
-    set_initial_pose: true       # mppi_params.yaml과 다른 부분
-    initial_pose:
       x: -24.99
       y: -30.65
       z: 0.0

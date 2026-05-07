@@ -115,9 +115,9 @@ class PatrolNode(Node):
         
         if self.is_returning_home:
             id_msg.data = "충전소(Origin)"
-            goal_msg.x = -25.0
-            goal_msg.y = -30.65
-            goal_msg.theta = 0.89
+            goal_msg.x = 0.0
+            goal_msg.y = 0.0
+            goal_msg.theta = 0.0
             self.next_place_pub.publish(id_msg)
             self.goal_pose_pub.publish(goal_msg)
             
@@ -201,13 +201,13 @@ class PatrolNode(Node):
     def return_to_origin(self):
         """원점(0,0,0)으로 단일 이동 명령을 전송합니다."""
         self.navigator.waitUntilNav2Active()
-        qz, qw = self.yaw_to_quaternion(0.89)
-
+        qz, qw = self.yaw_to_quaternion(0.0)
+        
         pose = PoseStamped()
         pose.header.frame_id = 'map'
         pose.header.stamp = self.navigator.get_clock().now().to_msg()
-        pose.pose.position.x = -25.0
-        pose.pose.position.y = -30.65
+        pose.pose.position.x = 0.0
+        pose.pose.position.y = 0.0
         pose.pose.orientation.z = qz
         pose.pose.orientation.w = qw
         

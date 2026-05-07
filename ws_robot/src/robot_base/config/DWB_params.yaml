@@ -80,7 +80,7 @@ controller_server:
     odom_topic: /odometry/filtered
     use_sim_time: false
     transform_tolerance: 0.3
-    controller_frequency: 15.0
+    controller_frequency: 10.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.0
     min_theta_velocity_threshold: 0.001
@@ -107,7 +107,7 @@ controller_server:
       min_vel_y: 0.0
       max_vel_x: 0.4
       max_vel_y: 0.0
-      max_vel_theta: 0.25
+      max_vel_theta: 0.6
       min_speed_xy: 0.0
       max_speed_xy: 0.4
       min_speed_theta: 0.05
@@ -151,7 +151,7 @@ local_costmap:
       transform_tolerance: 0.3
       global_frame: odom
       robot_base_frame: base_footprint
-      update_frequency: 15.0
+      update_frequency: 10.0
       publish_frequency: 10.0
       rolling_window: true
       width: 4
@@ -296,10 +296,10 @@ velocity_smoother:
     smoothing_frequency: 15.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.15, 0.0, 0.3]
-    min_velocity: [-0.15, 0.0, -0.3]
-    max_accel: [0.5, 0.0, 0.5]
-    max_decel: [-0.5, 0.0, -0.5]
+    max_velocity: [0.4, 0.0, 0.6]
+    min_velocity: [-0.4, 0.0, -0.6]
+    max_accel: [1.0, 0.0, 1.0]
+    max_decel: [-1.0, 0.0, -1.0]
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0

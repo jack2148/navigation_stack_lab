@@ -18,3 +18,7 @@ slam_toolbox:
     minimum_travel_distance: 0.01
     minimum_travel_heading: 0.01
     map_update_interval: 0.5
+    throttle_scans: 1
+
+    # timestamp mismatch가 계속 남으면 진단용으로만 고려
+    restamp_tf: true

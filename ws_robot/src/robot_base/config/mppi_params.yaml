@@ -102,24 +102,24 @@ controller_server:
 
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 30
+      time_steps: 25
       model_dt: 0.1
-      batch_size: 800
-      vx_std: 0.2
+      batch_size: 400
+      vx_std: 0.15
       vy_std: 0.0
-      wz_std: 0.4
+      wz_std: 0.6
       vx_max: 0.4
       vx_min: 0.0
       vy_max: 0.0
-      wz_max: 0.8
-      wz_min: -0.8
+      wz_max: 0.6
+      wz_min: -0.6
       iteration_count: 1
       prune_distance: 1.7
-      transform_tolerance: 0.3
-      temperature: 0.3
+      transform_tolerance: 0.5
+      temperature: 0.4
       gamma: 0.015
       motion_model: "DiffDrive"
-      visualize: false
+      visualize: true
       TrajectoryVisualizer:
         trajectory_step: 5
         time_step: 3
@@ -133,7 +133,7 @@ controller_server:
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.81
+        cost_weight: 4.0
         critical_cost: 300.0
         consider_footprint: false
         collision_cost: 1000000.0
@@ -328,8 +328,8 @@ velocity_smoother:
     smoothing_frequency: 15.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.4, 0.0, 0.8]
-    min_velocity: [-0.4, 0.0, -0.8]
+    max_velocity: [0.4, 0.0, 0.6]
+    min_velocity: [-0.4, 0.0, -0.6]
     max_accel: [1.0, 0.0, 1.0]
     max_decel: [-1.0, 0.0, -1.0]
     odom_duration: 0.1

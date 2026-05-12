@@ -1,13 +1,3 @@
-# Demo
-
-**MPPI — 장애물 앞에서 부드럽게 회피하며 주행**
-
-https://github.com/user-attachments/assets/f9c3c259-7703-4743-8fe3-fea5d009ca3b
-
-**DWB — 장애물에 가로막혀 정지**
-
-https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
-
 # Autonomous Security & Patrol Robot — ROS 2 + Nav2
 
 **[KR]** ROS 2 Nav2 기반 자율주행 순찰 로봇 시스템입니다. 실제 환경(복도, 사람 장애물)에서 SLAM → 위치 추정 → Waypoint 순찰 → 사람 추적까지의 End-to-End 파이프라인을 직접 구축하고 운용했습니다.

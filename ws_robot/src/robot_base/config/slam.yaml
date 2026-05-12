@@ -10,14 +10,15 @@ slam_toolbox:
 
     transform_timeout: 0.5
     tf_buffer_duration: 60.0
-    scan_queue_size: 1
+    scan_queue_size: 5
 
-    min_laser_range: 0.7
+    min_laser_range: 0.6
     max_laser_range: 10.0
 
     minimum_travel_distance: 0.01
     minimum_travel_heading: 0.01
     map_update_interval: 0.5
+    throttle_scans: 1
 
     # timestamp mismatch가 계속 남으면 진단용으로만 고려
     restamp_tf: true

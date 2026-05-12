@@ -81,10 +81,10 @@ class RobotPoseTFBridge(Node):
             return
 
         pose = Pose2D()
-        pose.x = tf_msg.transform.translation.x
-        pose.y = tf_msg.transform.translation.y
+        pose.x = round(tf_msg.transform.translation.x, 2)
+        pose.y = round(tf_msg.transform.translation.y, 2)
         q = tf_msg.transform.rotation
-        pose.theta = quaternion_to_yaw(q.x, q.y, q.z, q.w)
+        pose.theta = round(quaternion_to_yaw(q.x, q.y, q.z, q.w), 2)
         self.publisher.publish(pose)
 
 

@@ -21,7 +21,38 @@ LiDAR scan 데이터가 정상적으로 수신되며 checksum error가 발생하
 
 ---
 
-## 2. LiDAR 방향 반전 문제
+## 2. LiDAR 타임스탬프 불일치 (`TF_OLD_DATA` 경고)
+
+### Problem
+Nav2 / SLAM 실행 시 아래 경고가 반복되며 scan 데이터가 간헐적으로 무시됨:
+```
+TF_OLD_DATA ignoring data from the past for frame /laser_frame
+```
+
+### Cause
+YDLidar 드라이버가 발행하는 `/scan` 타임스탬프가 ROS 시스템 클럭과 미세하게 불일치.
+드라이버 내부에서 센서 측정 시각 기준으로 stamp를 찍다 보니 시스템 클럭보다 수십~수백 ms 뒤처지는 경우 발생.
+AMCL과 costmap은 최신 stamp 기준으로 동작하므로 오래된 stamp의 scan을 버림.
+
+### Solution
+`scan_restamper.py` 노드를 추가하여 타임스탬프를 수신 시점 기준으로 교체:
+```
+YDLidar driver → /scan_pre → scan_restamper (stamp = now()) → /scan → Nav2 / SLAM
+```
+
+YDLidar 드라이버의 publish topic을 `/scan_pre`로 변경하고,
+`scan_restamper`가 수신 즉시 `header.stamp = now()`로 교체 후 `/scan`으로 재발행.
+
+### Result
+`TF_OLD_DATA` 경고 소멸, scan 데이터가 정상적으로 AMCL·costmap에 반영됨.
+
+### Related Files
+- `src/scan_restamper.py`
+- `config/ydlidar.yaml` — publish topic 설정
+
+---
+
+## 3. LiDAR 방향 반전 문제
 
 ### Problem
 LiDAR를 반대로 장착하여 좌우 방향이 반전된 scan 데이터 발생

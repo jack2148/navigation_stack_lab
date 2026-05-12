@@ -66,7 +66,7 @@ def generate_launch_description():
         parameters=[laser_filter_config],
         remappings=[
             ("scan", "/scan_raw"),
-            ("scan_filtered", "/scan"),
+            ("scan_filtered", "/scan_pre"),
         ],
         output="screen",
     )
@@ -123,13 +123,22 @@ def generate_launch_description():
     # ---------- EKF 노드 (robot_localization) ----------
     # 로직: 휠 오도메트리와 IMU 센서 데이터를 융합하여 base_footprint TF를 발행합니다.
     ekf_yaml_path = os.path.join(pkg_share, "config", "ekf.yaml")
-    
+
     ekf_node = Node(
         package="robot_localization",
         executable="ekf_node",
         name="ekf_filter_node",
         output="screen",
         parameters=[ekf_yaml_path]
+    )
+
+    # ---------- Scan Restamper ----------
+    # YDLidar 디바이스 클록 드리프트로 인한 TF lookup 실패 방지
+    scan_restamper_node = Node(
+        package="robot_base",
+        executable="scan_restamper.py",
+        name="scan_restamper",
+        output="screen",
     )
 
     return LaunchDescription([
@@ -142,4 +151,5 @@ def generate_launch_description():
         laser_filter_node,
         imu_node,
         ekf_node,
+        scan_restamper_node,
     ])

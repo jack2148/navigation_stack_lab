@@ -29,12 +29,17 @@ amcl:
     robot_model_type: nav2_amcl::DifferentialMotionModel
     save_pose_rate: 0.5
     scan_topic: /scan
-    set_initial_pose: false
+    set_initial_pose: true
+    initial_pose:
+      x: 3.06
+      y: -0.57
+      z: 0.0
+      yaw: -0.63
     sigma_hit: 0.2
     tf_broadcast: true
     # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
     # (네트워크나 CPU 부하로 인한 일시적인 메시지 누락 방지)
-    transform_tolerance: 0.3
+    transform_tolerance: 0.5
     update_min_a: 0.05
     update_min_d: 0.05
     z_hit: 0.5
@@ -66,7 +71,7 @@ map_saver:
 planner_server:
   ros__parameters:
     use_sim_time: false
-    transform_tolerance: 0.3
+    transform_tolerance: 0.5
     expected_planner_frequency: 10.0
     planner_plugins: ["GridBased"]
     GridBased:
@@ -79,8 +84,8 @@ controller_server:
   ros__parameters:
     odom_topic: /odometry/filtered
     use_sim_time: false
-    transform_tolerance: 0.3
-    controller_frequency: 15.0
+    transform_tolerance: 0.5
+    controller_frequency: 10.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.0
     min_theta_velocity_threshold: 0.001
@@ -107,7 +112,7 @@ controller_server:
       min_vel_y: 0.0
       max_vel_x: 0.4
       max_vel_y: 0.0
-      max_vel_theta: 0.25
+      max_vel_theta: 0.6
       min_speed_xy: 0.0
       max_speed_xy: 0.4
       min_speed_theta: 0.05
@@ -125,7 +130,7 @@ controller_server:
       sim_time: 2.5
       linear_granularity: 0.05
       angular_granularity: 0.025
-      transform_tolerance: 0.3
+      transform_tolerance: 0.5
       xy_goal_tolerance: 0.25
       trans_stopped_velocity: 0.05
       short_circuit_trajectory_evaluation: true
@@ -148,10 +153,10 @@ local_costmap:
     ros__parameters:
       use_sim_time: false
       # Costmap 파트에서도 TF-Scan 간의 지연 상황을 허용하도록 대기 시간 추가
-      transform_tolerance: 0.3
+      transform_tolerance: 0.5
       global_frame: odom
       robot_base_frame: base_footprint
-      update_frequency: 15.0
+      update_frequency: 10.0
       publish_frequency: 10.0
       rolling_window: true
       width: 4
@@ -187,7 +192,7 @@ global_costmap:
     ros__parameters:
       use_sim_time: false
       # Costmap 파트에서도 TF-Scan 간의 지연 상황을 허용하도록 대기 시간 추가
-      transform_tolerance: 0.2
+      transform_tolerance: 0.5
       global_frame: map
       robot_base_frame: base_footprint
       update_frequency: 1.0
@@ -196,6 +201,7 @@ global_costmap:
       robot_radius: 0.28
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      filters: ["keepout_filter"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
@@ -216,6 +222,10 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 1.0
         inflation_radius: 0.5
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: true
+        filter_info_topic: "costmap_filter_info"
       always_send_full_costmap: true
 
 bt_navigator:
@@ -264,7 +274,7 @@ bt_navigator_rclcpp_node:
 behavior_server:
   ros__parameters:
     use_sim_time: false
-    transform_tolerance: 0.3
+    transform_tolerance: 0.5
     global_frame: odom
     robot_base_frame: base_footprint
     costmap_topic: local_costmap/costmap_raw
@@ -296,13 +306,26 @@ velocity_smoother:
     smoothing_frequency: 15.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.15, 0.0, 0.3]
-    min_velocity: [-0.15, 0.0, -0.3]
-    max_accel: [0.5, 0.0, 0.5]
-    max_decel: [-0.5, 0.0, -0.5]
+    max_velocity: [0.4, 0.0, 0.6]
+    min_velocity: [-0.4, 0.0, -0.6]
+    max_accel: [1.0, 0.0, 1.0]
+    max_decel: [-1.0, 0.0, -1.0]
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
+
+keepout_filter_mask_server:
+  ros__parameters:
+    use_sim_time: false
+
+costmap_filter_info_server:
+  ros__parameters:
+    use_sim_time: false
+    type: 0
+    filter_info_topic: "costmap_filter_info"
+    mask_topic: "keepout_filter_mask"
+    base: 0.0
+    multiplier: 1.0
 
 lifecycle_manager_localization:
   ros__parameters:

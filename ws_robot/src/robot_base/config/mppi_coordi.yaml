@@ -29,7 +29,12 @@ amcl:
     robot_model_type: nav2_amcl::DifferentialMotionModel
     save_pose_rate: 0.5
     scan_topic: /scan
-    set_initial_pose: false
+    set_initial_pose: true
+    initial_pose:
+      x: 3.06
+      y: -0.57
+      z: 0.0
+      yaw: -0.63
     sigma_hit: 0.2
     tf_broadcast: true
     # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
@@ -80,7 +85,7 @@ controller_server:
     odom_topic: /odometry/filtered
     use_sim_time: false
     transform_tolerance: 0.5
-    controller_frequency: 10.0
+    controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.0
     min_theta_velocity_threshold: 0.001
@@ -97,29 +102,29 @@ controller_server:
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: true
-      xy_goal_tolerance: 0.2
-      yaw_goal_tolerance: 0.2
+      xy_goal_tolerance: 0.1
+      yaw_goal_tolerance: 0.1
 
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 25
-      model_dt: 0.1
-      batch_size: 400
-      vx_std: 0.15
+      time_steps: 40
+      model_dt: 0.05
+      batch_size: 1100
+      vx_std: 0.2
       vy_std: 0.0
-      wz_std: 0.6
-      vx_max: 0.4
-      vx_min: 0.0
+      wz_std: 0.25
+      vx_max: 0.35
+      vx_min: -0.05
       vy_max: 0.0
-      wz_max: 0.6
-      wz_min: -0.6
-      iteration_count: 1
+      wz_max: 1.0
+      wz_min: -1.0
+      iteration_count: 2
       prune_distance: 1.7
       transform_tolerance: 0.5
-      temperature: 0.4
+      temperature: 0.25
       gamma: 0.015
       motion_model: "DiffDrive"
-      visualize: true
+      visualize: false
       TrajectoryVisualizer:
         trajectory_step: 5
         time_step: 3
@@ -133,7 +138,7 @@ controller_server:
       CostCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 4.0
+        cost_weight: 3.81
         critical_cost: 300.0
         consider_footprint: false
         collision_cost: 1000000.0
@@ -141,13 +146,13 @@ controller_server:
       GoalCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 5.0
+        cost_weight: 8.0
         threshold_to_consider: 1.4
       GoalAngleCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.0
-        threshold_to_consider: 0.5
+        cost_weight: 2.0
+        threshold_to_consider: 0.3
       PreferForwardCritic:
         enabled: true
         cost_power: 1
@@ -165,13 +170,13 @@ controller_server:
         cost_power: 1
         cost_weight: 5.0
         offset_from_furthest: 5
-        threshold_to_consider: 1.4
+        threshold_to_consider: 0.5
       PathAngleCritic:
         enabled: true
         cost_power: 1
         cost_weight: 2.0
         offset_from_furthest: 4
-        threshold_to_consider: 0.5
+        threshold_to_consider: 0.2
         max_angle_to_prefer: 0.314
         forward_preference: true
 
@@ -333,10 +338,10 @@ velocity_smoother:
     smoothing_frequency: 15.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.4, 0.0, 0.6]
-    min_velocity: [-0.4, 0.0, -0.6]
+    max_velocity: [0.4, 0.0, 0.8]
+    min_velocity: [-0.4, 0.0, -0.8]
     max_accel: [1.0, 0.0, 1.0]
-    max_decel: [-1.0, 0.0, -1.0]
+    max_decel: [-0.2, 0.0, -0.2]
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0

@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
@@ -24,8 +24,13 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(hardware_bringup_launch)
         ),
         
-        # 2. 매핑엔진 활성화
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(slam_launch)
+        # 2. 매핑엔진 활성화 (EKF TF 준비될 때까지 3초 대기)
+        TimerAction(
+            period=3.0,
+            actions=[
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(slam_launch)
+                ),
+            ]
         ),
     ])

@@ -3,19 +3,15 @@ import math
 import json
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped, Pose2D
-from std_msgs.msg import String, Empty
+from geometry_msgs.msg import PoseStamped, Pose2D, Twist, PointStamped
+from std_msgs.msg import String, Empty, Bool
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+
 
 class PatrolNode(Node):
     def __init__(self):
         super().__init__('patrol_node')
         
-        # ---------- [추가] 로봇이 켜질 때 고정된 시작 기준 좌표 (초기 위치) ----------
-        self.initial_x = 0.0
-        self.initial_y = 0.0
-        self.initial_yaw = 0.0
-
         # ---------- 리스트 하나씩 이동 및 캡처를 위한 변수 ----------
         self.sorted_waypoints = []
         self.current_wp_index = 0
@@ -36,6 +32,29 @@ class PatrolNode(Node):
             self.control_callback,
             10
         )
+        self.tracking_sub = self.create_subscription(
+            String,
+            '/person_tracking/follow_state',
+            self.tracking_callback,
+            10
+        )
+        
+        # ---------- [추가] 사람 추적 제어 영역 ----------
+        # '왜': 상태 메시지 외에 좌표 수신과 차체 직접 제어를 위한 통신 확보
+        self.follow_target_sub = self.create_subscription(
+            PointStamped,
+            '/person_tracking/follow_target',
+            self.target_callback,
+            10
+        )
+        self.cmd_vel_pub = self.create_publisher(Twist, '/diff_drive_controller/cmd_vel_unstamped', 10)
+        self.auth_pub = self.create_publisher(Bool, '/auth_ready', 10)
+
+        self.tracking_state = 'IDLE'
+        self.safe_distance = 1.0  # 사람 추적 시 유지할 목표 이격 거리 (m)
+        self.auth_published = False  # 도착 pub 중복 방지
+        self._resume_timer = None  # AMCL 수렴 대기 타이머
+
         self.capture_pub = self.create_publisher(
             String,
             '/patrol/capture_trigger',
@@ -52,6 +71,7 @@ class PatrolNode(Node):
         self.get_logger().info('GUI Control 구독 시작: /patrol/command 토픽')
         self.get_logger().info('Capture Trigger 발행 시작: /patrol/capture_trigger 토픽')
         self.get_logger().info('Camera Control 구독 시작: /patrol/capture_done 토픽 (done 대기용)')
+        self.get_logger().info('Person Tracking Follow State 구독 시작: /person_tracking/follow_state 토픽')
         
         # ---------- 상태 지속 퍼블리시 및 갱신용 노드 추가 ----------
         self.goal_pose_pub = self.create_publisher(Pose2D, '/goal_pose_2d', 10)
@@ -119,23 +139,6 @@ class PatrolNode(Node):
         return qz, qw
 
 
-    def set_initial_pose(self):
-        """맵 상의 절대 좌표 기준으로 내 로봇이 현재 어디있는지 세팅"""
-        qz, qw = self.yaw_to_quaternion(self.initial_yaw)
-        
-        initial_pose = PoseStamped()
-        initial_pose.header.frame_id = 'map'
-        initial_pose.header.stamp = self.navigator.get_clock().now().to_msg()
-        initial_pose.pose.position.x = float(self.initial_x)
-        initial_pose.pose.position.y = float(self.initial_y)
-        initial_pose.pose.orientation.x = 0.0
-        initial_pose.pose.orientation.y = 0.0
-        initial_pose.pose.orientation.z = qz
-        initial_pose.pose.orientation.w = qw
-        
-        self.navigator.setInitialPose(initial_pose)
-        self.get_logger().info(f'초기 위치 셋팅 완료: 맵 기준 X({self.initial_x}), Y({self.initial_y})')
-
     def camera_callback(self, msg):
         """카메라 촬영 및 서버 송신 완료 후 발송되는 명령 수신부"""
         try:
@@ -170,7 +173,9 @@ class PatrolNode(Node):
         if cmd == 'pause_patrol':
             self.get_logger().warn('>>> [PAUSE] 명령 수신! 즉시 일반 순찰을 정지합니다.')
             self.is_running = False
+            self.is_waiting_for_waypoints = True
             self.navigator.cancelTask()
+            self.reload_pub.publish(Empty())
             self.publish_current_status() # [상태 변경] 정지 송출
         elif cmd == 'start_patrol':
             if not self.sorted_waypoints:
@@ -179,6 +184,8 @@ class PatrolNode(Node):
             self.get_logger().info('>>> [START] 명령 수신! 일반 순찰을 이어서 시작/재개합니다.')
             self.is_running = True
             self.is_returning_home = False
+            self.tracking_state = 'IDLE'  # target_callback이 Nav2 주행을 방해하지 않도록 초기화
+            self.auth_published = False
             self.publish_current_status() # [상태 변경] 순찰 중 송출
             self.start_patrolling_async()
         elif cmd == 'return_to_charge' or cmd == 'retrun_to_charge':
@@ -230,10 +237,18 @@ class PatrolNode(Node):
                 
             # JSON 내의 patrol_order 값 기준으로 배열을 오름차순 정렬합니다.
             places.sort(key=lambda wp: int(wp.get("patrol_order", 0)))
-            
+
+            # 기존 waypoint와 place_id 순서가 같으면 현재 인덱스 유지 (이어서 진행)
+            new_ids = [p.get("place_id") for p in places]
+            old_ids = [p.get("place_id") for p in self.sorted_waypoints]
+            if new_ids != old_ids:
+                self.current_wp_index = 0
+                self.direction = 1
+                self.get_logger().info('웨이포인트가 변경되어 처음부터 순찰을 시작합니다.')
+            else:
+                self.get_logger().info(f'웨이포인트가 동일합니다. {self.current_wp_index + 1}번 지점부터 이어서 순찰합니다.')
+
             self.sorted_waypoints = places
-            self.current_wp_index = 0
-            self.direction = 1 # 새 리스트를 받으면 늘 정방향으로 시작
             self.is_running = True
             self.is_returning_home = False
             self.is_waiting_for_waypoints = False # [상태 변경] 무한 핑(Ping) 종료
@@ -267,14 +282,10 @@ class PatrolNode(Node):
                 return
         elif self.current_wp_index < 0:
             if self.is_running:
-                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! 서버에 새로운 맵(reload)을 무한 요청합니다.')
-                
-                # 새 웨이포인트(JSON)가 통신으로 도달할 때까지 로봇의 엔진을 내리고 무한 핑(Ping) 모드 진입
-                self.is_running = False
-                self.is_waiting_for_waypoints = True
-                
-                self.reload_pub.publish(Empty()) # 즉시 1회 발포
-                self.publish_current_status()    # [상태 변경] 대기 모드 진입 송출
+                self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! GUI pause 명령을 대기합니다.')
+                self.direction = 1
+                self.current_wp_index = 0
+                self.start_patrolling_async()
                 return
             else:
                 return
@@ -345,6 +356,84 @@ class PatrolNode(Node):
                 self.get_logger().warn('주행이 중도 취소되거나 Pause 되었습니다.')
             elif result == TaskResult.FAILED:
                 self.get_logger().error('주행 중 치명적인 문제가 발생해 이동 실패했습니다.')
+
+    # ---------- 사람 추적(Person Tracking) 제어 메서드 영역 ----------
+    
+    def tracking_callback(self, msg):
+        """사람 추적 상태(IDLE, TRACKING, LOST) 변경 수신부"""
+        new_state = msg.data.strip().upper()
+        
+        if new_state == 'TRACKING' and self.tracking_state != 'TRACKING':
+            self.get_logger().warn('>>> [TRACKING] 사람 추적 모드 발동! 진행 중인 순찰(Nav2)을 강제 취소합니다.')
+            self.is_running = False
+            self.navigator.cancelTask()
+            self.publish_current_status()
+
+        elif new_state == 'LOST' and self.tracking_state != 'LOST':
+            self.get_logger().warn('>>> [LOST] 사람을 놓쳤습니다! GUI에 일시정지를 알리고 대기합니다.')
+            self.stop_robot()
+            self.auth_published = False
+            # GUI에서 Pause명령을 내린 것과 동일한 처리
+            self.is_running = False
+            self.publish_current_status()
+
+        elif new_state == 'IDLE' and self.tracking_state != 'IDLE':
+            self.get_logger().info('>>> [IDLE] 대상 없음. AMCL 수렴 대기(2초) 후 순찰 재개합니다.')
+            self.stop_robot()
+            self.is_running = True
+            self.publish_current_status()
+            if self._resume_timer is not None:
+                self._resume_timer.cancel()
+            self._resume_timer = self.create_timer(2.0, self._resume_patrol_once)
+            
+        self.tracking_state = new_state
+        
+    def _resume_patrol_once(self):
+        """AMCL 수렴 대기 후 1회 순찰 재개 (one-shot 타이머 콜백)"""
+        self._resume_timer.cancel()
+        self._resume_timer = None
+        self.navigator.clearLocalCostmap()
+        self.start_patrolling_async()
+
+    def stop_robot(self):
+        """명시적으로 속도를 0으로 설정하여 미끄러짐 방지"""
+        twist = Twist()
+        self.cmd_vel_pub.publish(twist)
+
+    def target_callback(self, msg):
+        """실시간(TRACKING) 사람 좌표 기준으로 P제어를 수행하여 로봇을 쫓아가게 하는 로직"""
+        if self.tracking_state != 'TRACKING':
+            return
+
+        # RealSense optical frame: z=전방 거리, x=좌우(오른쪽+)
+        forward = msg.point.z
+        lateral = -msg.point.x  # 카메라 오른쪽+ → 로봇 왼쪽+ 변환
+
+        error_d = forward - self.safe_distance
+
+        # 도달 판정: safe_distance 이하로 진입
+        if error_d <= 0.1:
+            self.stop_robot()
+            if not self.auth_published:
+                auth_msg = Bool()
+                auth_msg.data = True
+                self.auth_pub.publish(auth_msg)
+                self.auth_published = True
+                self.get_logger().info('[ARRIVED] /auth_ready published.')
+                self.publish_current_status()
+            return
+
+        twist = Twist()
+
+        # 조향 제어 (Angular z) - 최대 ±0.8 rad/s
+        error_yaw = math.atan2(lateral, forward)
+        twist.angular.z = max(-0.8, min(0.8, 1.2 * error_yaw))
+
+        # 거리 전진 제어 (Linear x) - safe_distance(1.0m) 앞에서 정지
+        if error_d > 0.1:
+            twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
+
+        self.cmd_vel_pub.publish(twist)
 
 def main(args=None):
     rclpy.init(args=args)

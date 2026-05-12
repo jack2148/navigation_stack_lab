@@ -1,4 +1,3 @@
-
 # Demo
 
 **MPPI — 장애물 앞에서 부드럽게 회피하며 주행**
@@ -11,9 +10,9 @@ https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
 
 # Autonomous Security & Patrol Robot — ROS 2 + Nav2
 
-**[KR]** ROS 2 Nav2 기반 자율주행 순찰 로봇 시스템입니다. 실제 환경(복도, 사람 장애물)에서 SLAM → 위치 추정 → Waypoint 순찰까지의 End-to-End 파이프라인을 직접 구축하고 운용했습니다.
+**[KR]** ROS 2 Nav2 기반 자율주행 순찰 로봇 시스템입니다. 실제 환경(복도, 사람 장애물)에서 SLAM → 위치 추정 → Waypoint 순찰 → 사람 추적까지의 End-to-End 파이프라인을 직접 구축하고 운용했습니다.
 
-**[EN]** An autonomous patrol robot system built on ROS 2 Nav2, covering the full pipeline from SLAM and EKF-based localization to waypoint patrol navigation in an indoor environment.
+**[EN]** An autonomous patrol robot system built on ROS 2 Nav2, covering the full pipeline from SLAM and EKF-based localization to waypoint patrol and real-time person-following in an indoor environment.
 
 ---
 
@@ -23,6 +22,7 @@ https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
 - EKF 기반 센서 융합 (2D LiDAR + Wheel Odometry + IMU)
 - GUI 연동 JSON 기반 Waypoint 순찰 (왕복 핑퐁 패턴)
 - 각 순찰 지점 도착 시 카메라 촬영 트리거
+- 사람 감지 시 실시간 추적 모드 전환 (TF 좌표 변환 + P제어)
 - Local Planner DWB → MPPI 마이그레이션 완료
 
 ---
@@ -60,11 +60,21 @@ graph TD
     C --> B["Mobile Robot"]
 ```
 
+**순찰 ↔ 추적 상태 전환**
+
+```
+순찰 중 (Nav2 제어)
+    └─ 사람 감지 → TRACKING (Nav2 취소 + P제어 직접 구동)
+          ├─ 사람 놓침 → LOST (정지, GUI에 알림)
+          └─ 대상 사라짐 → IDLE (순찰 자동 재개)
+```
+
 주요 토픽 흐름:
 - 센서 입력: `/scan`, `/odom`, `/imu`
 - 상태 추정 출력: `/tf` (EKF)
 - 맵/위치: `/map`, `/amcl_pose`
 - 제어 출력: `/cmd_vel`
+- 추적 연동: `/person_tracking/follow_state`, `/person_tracking/follow_target`
 
 ---
 
@@ -79,10 +89,11 @@ graph TD
 | Nav2 Bringup 및 Waypoint 주행 검증 | 완료 |
 | MPPI Local Planner 도입 및 안정화 | 완료 |
 | GUI 연동 JSON 순찰 경로 수신 | 완료 |
+| 사람 추적 모드 (TF 변환 + P제어) | 완료 |
 | DWB / MPPI 반복 비교 실험 | 예정 |
 | 정량적 플래너 성능 비교 분석 | 예정 |
 
-센서 연동부터 Localization, Waypoint 주행까지 End-to-End 파이프라인이 구축된 상태입니다. 다음 단계는 동일 시나리오를 반복 주행하며 플래너별 성능을 정량 비교하는 실험입니다.
+센서 연동부터 Localization, Waypoint 주행, 사람 추적까지 End-to-End 파이프라인이 구축된 상태입니다. 다음 단계는 동일 시나리오를 반복 주행하며 플래너별 성능을 정량 비교하는 실험입니다.
 
 ---
 
@@ -182,13 +193,13 @@ ros2 launch robot_base patrol.launch.py
 
 ## English Summary
 
-This repository documents the development of an autonomous indoor patrol robot built on ROS 2 Nav2. The full pipeline — from SLAM mapping and EKF-based localization to waypoint patrol navigation — has been implemented and tested on real hardware.
+This repository documents the development of an autonomous indoor patrol robot built on ROS 2 Nav2. The full pipeline — from SLAM mapping and EKF-based localization to waypoint patrol and real-time person-following — has been implemented and tested on real hardware.
 
 **Key problems solved:**
 
 1. **IMU Drift Correction** — Detected up to 110° yaw misalignment and a persistent 10° discrepancy between AMCL and odometry. Wrote custom ROSbag analysis scripts to quantify the error, then corrected it through EKF covariance tuning.
 2. **DWB → MPPI Migration** — Identified severe goal-point oscillation and costmap ghost-obstacle anomalies as fundamental limitations of the DWB planner. Applied laser noise filtering as a first step, then migrated the full local navigation stack to MPPI, achieving significantly smoother trajectories.
 
-**Current state:** The complete navigation pipeline is operational. Next steps focus on systematic repeated-run experiments to quantitatively compare DWB and MPPI under controlled indoor scenarios.
+**Current state:** The complete pipeline is operational including the person tracking mode. Next steps focus on systematic repeated-run experiments to quantitatively compare DWB and MPPI under controlled indoor scenarios.
 
 For detailed issue documentation, see the [docs/](docs/) directory.

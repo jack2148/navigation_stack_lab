@@ -1,45 +1,60 @@
 # Autonomous Security & Patrol Robot — ROS 2 + Nav2
 
-**[KR]** ROS 2 Nav2 기반 자율주행 순찰 로봇 시스템입니다. 실제 환경(복도, 사람 장애물)에서 SLAM → 위치 추정 → Waypoint 순찰 → 사람 추적까지의 End-to-End 파이프라인을 직접 구축하고 운용했습니다.
+An autonomous indoor patrol robot built on ROS 2 Nav2, covering the full pipeline from SLAM mapping and EKF-based localization to waypoint patrol and real-time person-following — implemented and tested on real hardware.
 
-**[EN]** An autonomous patrol robot system built on ROS 2 Nav2, covering the full pipeline from SLAM and EKF-based localization to waypoint patrol and real-time person-following in an indoor environment.
-
----
-
-## 주요 기능
-
-- ROS 2 Nav2 기반 자율주행 파이프라인 (Mapping → Localization → Navigation)
-- EKF 기반 센서 융합 (2D LiDAR + Wheel Odometry + IMU)
-- GUI 연동 JSON 기반 Waypoint 순찰 (왕복 핑퐁 패턴)
-- 각 순찰 지점 도착 시 카메라 촬영 트리거
-- 사람 감지 시 실시간 추적 모드 전환 (TF 좌표 변환 + P제어)
-- Local Planner DWB → MPPI 마이그레이션 완료
+> **[한국어 요약](#korean-summary)** 는 하단에 있습니다.
 
 ---
 
-## 핵심 문제 해결 과정
+## Demo
 
-이 프로젝트에서 가장 집중한 부분은 단순 구현을 넘어, 실제 로봇에서 발생한 **센서 오차와 제어기 한계를 직접 분석하고 해결한 과정**입니다.
+**MPPI — smooth obstacle avoidance**
 
-**1. IMU Drift 및 센서 융합 최적화** → [상세 문서](docs/imu_and_pose_issues.md)
+https://github.com/user-attachments/assets/f9c3c259-7703-4743-8fe3-fea5d009ca3b
 
-주행 중 Yaw가 최대 110도 뒤틀리고, AMCL과 Odometry 사이에 약 10도의 위치 오차가 지속되는 현상을 포착했습니다. ROSbag 데이터를 기반으로 오차 분석 스크립트(`analyze_true_error.py`)를 직접 작성해 오차를 정량화하고, EKF 공분산 파라미터 튜닝을 통해 해결했습니다.
+**DWB — blocked by obstacle**
 
-**2. DWB 진동 문제 해결 및 MPPI 도입** → [상세 문서](docs/navigation_issues.md)
-
-목표 지점 근처에서 심한 진동(Oscillation)과 Costmap 장애물 잔상 문제가 발생했습니다. 레이저 노이즈 필터(`laser_filter`) 적용과 파라미터 최적화를 먼저 시도했으나 DWB의 알고리즘적 한계가 명확해 MPPI(Model Predictive Path Integral)로 전환했고, 이후 주행 안정성이 크게 개선되었습니다.
+https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
 
 ---
 
-## 시스템 구조
+## Features
 
-**하드웨어**
-- Mobile base, 2D LiDAR, Wheel encoder, IMU, Jetson Orin NX
+- **End-to-End autonomous pipeline** — SLAM → Localization → Waypoint patrol on real hardware
+- **Sensor fusion** — 2D LiDAR + Wheel Odometry + IMU via EKF (`robot_localization`)
+- **MPPI local planner** — migrated from DWB; smooth obstacle avoidance with Model Predictive Path Integral control
+- **Ping-pong waypoint patrol** — JSON-based waypoint list received from GUI; robot traverses forward and backward repeatedly
+- **Person tracking mode** — on detection, Nav2 is preempted and the robot follows the person using a P-controller via RealSense depth data; automatically resumes patrol when the person disappears
+- **Camera trigger** — publishes a capture trigger on arrival at each waypoint; waits for confirmation before moving to the next
+- **Keepout zone** — costmap filter mask prevents the robot from entering restricted areas
 
-**소프트웨어**
-- ROS 2 Humble, slam_toolbox, robot_localization (EKF), Nav2 (MPPI), RViz2
+---
 
-**데이터 흐름**
+## System Architecture
+
+**Hardware**
+
+| Component | Detail |
+| :--- | :--- |
+| Mobile base | Differential drive + wheel encoders |
+| LiDAR | YDLidar (2D) |
+| Depth camera | Intel RealSense (person tracking) |
+| IMU | On-board IMU |
+| Compute | Jetson Orin NX |
+
+**Software stack**
+
+| Layer | Component |
+| :--- | :--- |
+| OS | Ubuntu 22.04 |
+| Middleware | ROS 2 Humble |
+| Mapping | slam_toolbox |
+| Localization | AMCL + robot_localization (EKF) |
+| Navigation | Nav2 — MPPI controller |
+| Visualization | RViz2 |
+| Language | Python, C++ |
+
+**Data flow**
 
 ```mermaid
 graph TD
@@ -50,72 +65,89 @@ graph TD
     C --> B["Mobile Robot"]
 ```
 
-**순찰 ↔ 추적 상태 전환**
+**Patrol ↔ Tracking state machine**
 
 ```
-순찰 중 (Nav2 제어)
-    └─ 사람 감지 → TRACKING (Nav2 취소 + P제어 직접 구동)
-          ├─ 사람 놓침 → LOST (정지, GUI에 알림)
-          └─ 대상 사라짐 → IDLE (순찰 자동 재개)
+Patrolling (Nav2 control)
+    └─ Person detected → TRACKING (Nav2 cancelled, P-controller takes over)
+          ├─ Person lost  → LOST   (robot stops, GUI notified)
+          └─ Person gone  → IDLE   (2s AMCL convergence delay → patrol resumes)
 ```
 
-주요 토픽 흐름:
-- 센서 입력: `/scan`, `/odom`, `/imu`
-- 상태 추정 출력: `/tf` (EKF)
-- 맵/위치: `/map`, `/amcl_pose`
-- 제어 출력: `/cmd_vel`
-- 추적 연동: `/person_tracking/follow_state`, `/person_tracking/follow_target`
+**Key ROS topics**
 
----
-
-## 현재 진행 상황
-
-| 항목 | 상태 |
+| Direction | Topic |
 | :--- | :--- |
-| LiDAR / IMU / Odometry 센서 연동 | 완료 |
-| EKF 기반 센서 융합 및 Drift 보정 | 완료 |
-| slam_toolbox 2D 맵 생성 | 완료 |
-| AMCL 기반 Localization | 완료 |
-| Nav2 Bringup 및 Waypoint 주행 검증 | 완료 |
-| MPPI Local Planner 도입 및 안정화 | 완료 |
-| GUI 연동 JSON 순찰 경로 수신 | 완료 |
-| 사람 추적 모드 (TF 변환 + P제어) | 완료 |
-| DWB / MPPI 반복 비교 실험 | 예정 |
-| 정량적 플래너 성능 비교 분석 | 예정 |
-
-센서 연동부터 Localization, Waypoint 주행, 사람 추적까지 End-to-End 파이프라인이 구축된 상태입니다. 다음 단계는 동일 시나리오를 반복 주행하며 플래너별 성능을 정량 비교하는 실험입니다.
+| Sensor input | `/scan`, `/odom`, `/imu` |
+| State estimation | `/tf` (EKF), `/amcl_pose` |
+| GUI interface | `/patrol/waypoints_json`, `/patrol/command` |
+| Robot pose (GUI) | `/robot_pose` (Pose2D, 10 Hz) |
+| Person tracking | `/person_tracking/follow_state`, `/person_tracking/follow_target` |
+| Control output | `/diff_drive_controller/cmd_vel_unstamped` |
 
 ---
 
-## 실험 계획
+## Key Engineering Challenges
 
-**실험 시나리오**
+### 1. IMU Drift & Sensor Fusion → [details](docs/imu_and_pose_issues.md)
 
-| 시나리오 | 설명 | 측정 지표 |
+During navigation, yaw deviated by up to **110°** and a persistent **~10° discrepancy** between AMCL and odometry was observed. Custom ROSbag analysis scripts were written to quantify the error over time, and EKF covariance weights were tuned to increase AMCL's contribution relative to IMU.
+
+### 2. DWB Oscillation → MPPI Migration → [details](docs/navigation_issues.md)
+
+The DWB planner produced severe goal-point oscillation and failed to clear costmap ghost obstacles left by structural pillars. After applying `laser_filter` to suppress near-range noise, DWB's algorithmic limitations remained. Migrating to **MPPI** resolved the oscillation and produced significantly smoother trajectories.
+
+### 3. MPPI CPU Overload & Tuning → [details](docs/mppi_tuning.md)
+
+At initial settings, the control loop dropped from 10 Hz to 5–6 Hz due to CPU overload, causing overshoot and repeated goal-checking loops. Tuning `batch_size`, `time_steps`, and aligning `model_dt = 1 / controller_frequency` stabilized the loop at 20 Hz.
+
+### 4. AMCL Convergence After Person Tracking
+
+After the person-tracking P-controller preempts Nav2, AMCL needs time to re-converge. Resuming patrol immediately caused MPPI to plan from a stale pose and oscillate near the goal. A **2-second delay + `clearLocalCostmap()`** call before resuming solved this.
+
+### 5. LiDAR Timestamp Drift → [details](docs/sensor_issues.md)
+
+YDLidar's driver stamped scan messages using sensor-side time, causing `TF_OLD_DATA` warnings and dropped scans in AMCL and the costmap. A lightweight `scan_restamper` node re-stamps incoming scans with `ros::Time::now()` before forwarding to Nav2.
+
+---
+
+## Environment & Map
+
+The map was built using slam_toolbox in a real indoor corridor environment (resolution: 0.05 m/px).
+
+![Map](docs/experiments/assets/map_center.png)
+
+---
+
+## Experiment Results
+
+Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odometry trajectories were recorded and analyzed across multiple trials.
+
+**Best vs Worst trajectory comparison**
+
+| | Trial | Time-to-goal |
 | :--- | :--- | :--- |
-| A. 기본 반복 주행 | 장애물 없는 복도에서 2~3 Waypoint 반복 (10회 이상) | 성공률, 도달 시간, 경로 편차 |
-| B. 고정 장애물 | 경로 위에 고정 장애물 배치 | 회피 성공률, Recovery 횟수 |
-| C. 동적 인간 간섭 | 정해진 위치/타이밍에서 사람이 앞을 막음 | 정지·회피·Recovery 양상 |
-| D. 협소 공간 통과 | 좁은 복도 반복 통과 | 통과 안정성, 충돌 횟수 |
+| Best run | Trial 05 | 28.98 s |
+| Worst run | Trial 02 | 39.07 s |
 
-**정량 지표**
-- `Time-to-goal [s]`: 목표 도달 소요 시간
-- `Path length [m]`: 실제 주행 거리
-- `Path deviation [m]`: 기준 경로 대비 횡방향 이탈
-- `Collision / near-collision count`: 충돌 및 근접 위험
-- `Recovery behavior count`: Recovery 동작 발생 횟수
-- `Oscillation count`: 진동 또는 좌우 흔들림 발생 빈도
-- `Average linear velocity [m/s]`: 평균 선속도
+![Trajectory Comparison](docs/experiments/assets/comparison_trajectory.png)
 
-이론적으로는 부드러운 회피가 기대되지만, 실제로는 진동·급정지·Recovery 지연이 자주 발생합니다. **기대 동작과 실제 동작 간의 차이를 기록하고 최적 튜닝 포인트를 찾는 것**이 이 실험의 핵심 목표입니다.
+> Blue (Best, Trial 05): smooth, consistent path with minimal lateral deviation.
+> Red (Worst, Trial 02): jagged path with sharp direction changes, caused by CPU lag and control loop delays.
+
+**Individual trajectories**
+
+| Best Run (Trial 05) | Worst Run (Trial 02) |
+| :---: | :---: |
+| ![Best](docs/experiments/assets/best_trajectory.png) | ![Worst](docs/experiments/assets/worst_trajectory.png) |
+
+For full analysis see [docs/experiments/trajectory_comparison.md](docs/experiments/trajectory_comparison.md).
 
 ---
 
-## 실행 방법
+## Quick Start
 
-**공통: 빌드 및 소싱**
-
-새 터미널을 열 때마다 워크스페이스를 소싱해야 합니다.
+**Build and source** (run in every new terminal)
 
 ```bash
 cd ~/navigation_stack_lab/ws_robot
@@ -123,73 +155,75 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-**1. SLAM — 맵 생성**
+**1. SLAM — build a map**
 
 ```bash
-# 터미널 1: 기본 구동
+# Terminal 1: hardware bringup
 ros2 launch robot_base bringup.launch.py
 
-# 터미널 2: SLAM 시작
+# Terminal 2: SLAM
 ros2 launch robot_base slam.launch.py
 
-# 터미널 3: 맵 저장
+# Terminal 3: save map
 ros2 run nav2_map_server map_saver_cli -f ~/navigation_stack_lab/ws_robot/src/robot_base/maps/my_map \
   --ros-args -p save_map_timeout:=10000
 ```
 
-**2. Nav2 — 자율주행**
+**2. Autonomous navigation + patrol**
 
 ```bash
-# 터미널 1: 기본 구동
+# Terminal 1: hardware bringup
 ros2 launch robot_base bringup.launch.py
 
-# 터미널 2: Nav2 구동 (TF Bridge 자동 포함)
+# Terminal 2: Nav2 + TF bridge
 ros2 launch robot_base nav2.launch.py
 
-# 터미널 3: 순찰 노드
+# Terminal 3: patrol node
 ros2 launch robot_base patrol.launch.py
 ```
 
-> **초기 위치 설정 필수:** RViz2 실행 후 `2D Pose Estimate`로 초기 위치를 지정해야 AMCL이 파티클을 초기화합니다. 레이저 스캔이 벽과 일치하는 것을 확인한 뒤 `Nav2 Goal`로 주행을 시작하면 됩니다.
+> The AMCL initial pose is hardcoded in `config/mppi_coordi.yaml`. Update `initial_pose` (x, y, yaw) to match your environment before launching.
 
 ---
 
-## 트러블슈팅 문서
+## Project Status
 
-개발 과정에서 겪은 주요 이슈와 해결 과정을 문서로 정리했습니다.
-
-- [LiDAR 센서 연동 이슈](docs/sensor_issues.md)
-- [제어 및 인코더 이슈](docs/control_and_encoder.md)
-- [TF / 좌표계 변환 이슈](docs/tf_and_frame.md)
-- [SLAM 맵 왜곡 이슈](docs/mapping_issues.md)
-- [경로 진동 및 잔상 이슈 — DWB → MPPI](docs/navigation_issues.md)
-- [IMU Drift 및 센서 융합 이슈](docs/imu_and_pose_issues.md)
+| Item | Status |
+| :--- | :---: |
+| LiDAR / IMU / Odometry integration | Done |
+| EKF sensor fusion & drift correction | Done |
+| slam_toolbox 2D mapping | Done |
+| AMCL localization | Done |
+| Nav2 waypoint navigation | Done |
+| MPPI local planner tuning | Done |
+| GUI JSON waypoint interface | Done |
+| Person tracking mode (P-controller) | Done |
+| DWB vs MPPI comparative experiments | Planned |
+| Quantitative planner performance analysis | Planned |
 
 ---
 
-## 기술 스택
+## Troubleshooting Docs
 
-| 분류 | 내용 |
+| Issue | Document |
 | :--- | :--- |
-| OS | Ubuntu 22.04 |
-| Middleware | ROS 2 Humble |
-| Language | Python, C++ |
-| Navigation | Nav2 (MPPI) |
-| Mapping | slam_toolbox |
-| Localization | AMCL, robot_localization (EKF) |
-| Visualization | RViz2 |
+| LiDAR sensor & timestamp issues | [docs/sensor_issues.md](docs/sensor_issues.md) |
+| Control & encoder issues | [docs/control_and_encoder.md](docs/control_and_encoder.md) |
+| TF / coordinate frame issues | [docs/tf_and_frame.md](docs/tf_and_frame.md) |
+| SLAM map distortion | [docs/mapping_issues.md](docs/mapping_issues.md) |
+| Navigation oscillation — DWB → MPPI | [docs/navigation_issues.md](docs/navigation_issues.md) |
+| IMU drift & sensor fusion | [docs/imu_and_pose_issues.md](docs/imu_and_pose_issues.md) |
+| MPPI tuning & crash records | [docs/mppi_tuning.md](docs/mppi_tuning.md) |
 
 ---
 
-## English Summary
+## Korean Summary
 
-This repository documents the development of an autonomous indoor patrol robot built on ROS 2 Nav2. The full pipeline — from SLAM mapping and EKF-based localization to waypoint patrol and real-time person-following — has been implemented and tested on real hardware.
+ROS 2 Nav2 기반 자율주행 순찰 로봇 시스템입니다. 실제 환경(복도, 사람 장애물)에서 SLAM → 위치 추정 → Waypoint 순찰 → 사람 추적까지의 End-to-End 파이프라인을 직접 구축하고 운용했습니다.
 
-**Key problems solved:**
-
-1. **IMU Drift Correction** — Detected up to 110° yaw misalignment and a persistent 10° discrepancy between AMCL and odometry. Wrote custom ROSbag analysis scripts to quantify the error, then corrected it through EKF covariance tuning.
-2. **DWB → MPPI Migration** — Identified severe goal-point oscillation and costmap ghost-obstacle anomalies as fundamental limitations of the DWB planner. Applied laser noise filtering as a first step, then migrated the full local navigation stack to MPPI, achieving significantly smoother trajectories.
-
-**Current state:** The complete pipeline is operational including the person tracking mode. Next steps focus on systematic repeated-run experiments to quantitatively compare DWB and MPPI under controlled indoor scenarios.
-
-For detailed issue documentation, see the [docs/](docs/) directory.
+**핵심 문제 해결:**
+1. **IMU Drift 보정** — 최대 110도 Yaw 오차를 ROSbag 분석 스크립트로 정량화하고 EKF 공분산 튜닝으로 해결
+2. **DWB → MPPI 마이그레이션** — 목표 지점 진동 및 Costmap 잔상 문제를 MPPI 전환으로 해결
+3. **사람 추적 모드** — 사람 감지 시 Nav2를 취소하고 P제어로 직접 추적, 사라지면 자동 순찰 재개
+4. **AMCL 수렴 대기** — 추적 종료 후 즉시 재개 시 발생하는 oscillation을 2초 딜레이로 해결
+5. **LiDAR 타임스탬프 보정** — `scan_restamper` 노드로 YDLidar 드라이버의 stamp 불일치 해결

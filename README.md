@@ -115,7 +115,7 @@ YDLidar's driver stamped scan messages using sensor-side time, causing `TF_OLD_D
 
 The map was built using slam_toolbox in a real indoor corridor environment (resolution: 0.05 m/px).
 
-![Map](docs/experiments/assets/map_center.png)
+![Map](docs/results/map_center.png)
 
 ---
 
@@ -130,7 +130,7 @@ Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odo
 | Best run | Trial 05 | 28.98 s |
 | Worst run | Trial 02 | 39.07 s |
 
-![Trajectory Comparison](docs/experiments/assets/comparison_trajectory.png)
+![Trajectory Comparison](docs/results/comparison_trajectory.png)
 
 > Blue (Best, Trial 05): smooth, consistent path with minimal lateral deviation.
 > Red (Worst, Trial 02): jagged path with sharp direction changes, caused by CPU lag and control loop delays.
@@ -139,7 +139,7 @@ Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odo
 
 | Best Run (Trial 05) | Worst Run (Trial 02) |
 | :---: | :---: |
-| ![Best](docs/experiments/assets/best_trajectory.png) | ![Worst](docs/experiments/assets/worst_trajectory.png) |
+| ![Best](docs/results/best_trajectory.png) | ![Worst](docs/results/worst_trajectory.png) |
 
 For full analysis see [docs/experiments/trajectory_comparison.md](docs/experiments/trajectory_comparison.md).
 

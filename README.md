@@ -172,17 +172,14 @@ ros2 run nav2_map_server map_saver_cli -f ~/navigation_stack_lab/ws_robot/src/ro
 **2. Autonomous navigation + patrol**
 
 ```bash
-# Terminal 1: hardware bringup
-ros2 launch robot_base bringup.launch.py
+# Terminal 1: hardware bringup + Nav2 + TF bridge (all-in-one)
+ros2 launch robot_base bringup_nav.launch.py
 
-# Terminal 2: Nav2 + TF bridge
-ros2 launch robot_base nav2.launch.py
-
-# Terminal 3: patrol node
+# Terminal 2: patrol node (GUI integration included)
 ros2 launch robot_base patrol.launch.py
 ```
 
-> The AMCL initial pose is hardcoded in `config/mppi_coordi.yaml`. Update `initial_pose` (x, y, yaw) to match your environment before launching.
+> The AMCL initial pose is hardcoded in `config/mppi_params.yaml`. Update `initial_pose` (x, y, yaw) to match your environment before launching.
 
 ---
 
@@ -198,7 +195,7 @@ ros2 launch robot_base patrol.launch.py
 | MPPI local planner tuning | Done |
 | GUI JSON waypoint interface | Done |
 | Person tracking mode (P-controller) | Done |
-| DWB vs MPPI comparative experiments | Planned |
+| DWB vs MPPI comparative experiments | [Done](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS.git) |
 | Quantitative planner performance analysis | Planned |
 
 ---

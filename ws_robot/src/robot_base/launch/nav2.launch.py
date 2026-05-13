@@ -7,7 +7,7 @@ from launch_ros.actions import SetRemap, Node
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('robot_base')
-    nav2_params_file = os.path.join(pkg_share, 'config', 'mppi_coordi.yaml')
+    nav2_params_file = os.path.join(pkg_share, 'config', 'mppi_params.yaml')
     map_file = os.path.join(pkg_share, 'maps', 'center.yaml')
     keepout_mask_file = os.path.join(pkg_share, 'maps', 'keepoutmask.yaml')
 
@@ -51,11 +51,24 @@ def generate_launch_description():
         }]
     )
 
+    filter_lifecycle_manager = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_costmap_filters',
+        output='screen',
+        parameters=[{
+            'use_sim_time': False,
+            'autostart': True,
+            'node_names': ['keepout_filter_mask_server', 'costmap_filter_info_server'],
+        }]
+    )
+
     return LaunchDescription([
         SetRemap('/cmd_vel', '/diff_drive_controller/cmd_vel_unstamped'),
 
         keepout_mask_server,
         costmap_filter_info_server,
+        filter_lifecycle_manager,
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav2_launch),

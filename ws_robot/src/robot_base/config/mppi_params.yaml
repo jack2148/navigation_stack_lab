@@ -29,7 +29,12 @@ amcl:
     robot_model_type: nav2_amcl::DifferentialMotionModel
     save_pose_rate: 0.5
     scan_topic: /scan
-    set_initial_pose: false
+    set_initial_pose: true
+    initial_pose:
+      x: -1.58
+      y: 0.1
+      z: 0.0
+      yaw: 1.56
     sigma_hit: 0.2
     tf_broadcast: true
     # TF(Odom)와 Scan 간의 시간 지연을 허용하여 AMCL이 메시지를 버리지 않도록 대기 시간 상향 조정
@@ -364,4 +369,4 @@ lifecycle_manager_navigation:
   ros__parameters:
     use_sim_time: false
     autostart: true
-    node_names: ["controller_server", "planner_server", "behavior_server", "bt_navigator", "waypoint_follower", "velocity_smoother", "keepout_filter_mask_server", "costmap_filter_info_server"]
+    node_names: ["controller_server", "planner_server", "behavior_server", "bt_navigator", "waypoint_follower", "velocity_smoother"]

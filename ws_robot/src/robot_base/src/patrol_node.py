@@ -19,7 +19,6 @@ class PatrolNode(Node):
         
         self.navigator = BasicNavigator()
 
-        # ---------- 충전소(홈) 위치 하드코딩 ----------
         self.HOME_X = -1.58
         self.HOME_Y = 0.1
         self.HOME_YAW = 1.56
@@ -204,15 +203,15 @@ class PatrolNode(Node):
             self.get_logger().info(f'알 수 없는 제어 명령입니다: {cmd}')
 
     def return_to_origin(self):
-        """충전소 위치로 단일 이동 명령을 전송합니다."""
+        """원점(0,0,0)으로 단일 이동 명령을 전송합니다."""
         self.navigator.waitUntilNav2Active()
-        qz, qw = self.yaw_to_quaternion(self.HOME_YAW)
-
+        qz, qw = self.yaw_to_quaternion(0.0)
+        
         pose = PoseStamped()
         pose.header.frame_id = 'map'
         pose.header.stamp = self.navigator.get_clock().now().to_msg()
-        pose.pose.position.x = self.HOME_X
-        pose.pose.position.y = self.HOME_Y
+        pose.pose.position.x = 0.0
+        pose.pose.position.y = 0.0
         pose.pose.orientation.z = qz
         pose.pose.orientation.w = qw
         
@@ -367,10 +366,7 @@ class PatrolNode(Node):
     def tracking_callback(self, msg):
         """사람 추적 상태(IDLE, TRACKING, LOST) 변경 수신부"""
         new_state = msg.data.strip().upper()
-
-        if self.is_returning_home:
-            return
-
+        
         if new_state == 'TRACKING' and self.tracking_state != 'TRACKING':
             self.get_logger().warn('>>> [TRACKING] 사람 추적 모드 발동! 진행 중인 순찰(Nav2)을 강제 취소합니다.')
             self.is_running = False

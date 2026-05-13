@@ -141,7 +141,7 @@ Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odo
 | :---: | :---: |
 | ![Best](docs/results/best_trajectory.png) | ![Worst](docs/results/worst_trajectory.png) |
 
-For full analysis see [docs/experiments/trajectory_comparison.md](docs/experiments/trajectory_comparison.md).
+For full analysis see [ROS2_MPPI_DWB_Experiment_ICROS](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS.git).
 
 ---
 

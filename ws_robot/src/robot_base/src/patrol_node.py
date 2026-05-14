@@ -177,9 +177,8 @@ class PatrolNode(Node):
         if cmd == 'pause_patrol':
             self.get_logger().warn('>>> [PAUSE] 명령 수신! 즉시 일반 순찰을 정지합니다.')
             self.is_running = False
-            self.is_waiting_for_waypoints = True
+            self.is_waiting_for_waypoints = False
             self.navigator.cancelTask()
-            self.reload_pub.publish(Empty())
             self.publish_current_status() # [상태 변경] 정지 송출
         elif cmd == 'start_patrol':
             if not self.sorted_waypoints:
@@ -193,7 +192,7 @@ class PatrolNode(Node):
             self.publish_current_status() # [상태 변경] 순찰 중 송출
             self.start_patrolling_async()
         elif cmd == 'return_to_charge' or cmd == 'retrun_to_charge':
-            self.get_logger().info('>>> [RETURN] 복귀 명령 수신! 충전소(0,0,0)로 복귀합니다.')
+            self.get_logger().info('>>> [RETURN] 복귀 명령 수신! 충전소로 복귀합니다.')
             self.is_running = False
             self.is_returning_home = True
             self.publish_current_status() # [상태 변경] 복귀 중 송출
@@ -253,13 +252,16 @@ class PatrolNode(Node):
                 self.get_logger().info(f'웨이포인트가 동일합니다. {self.current_wp_index + 1}번 지점부터 이어서 순찰합니다.')
 
             self.sorted_waypoints = places
-            self.is_running = True
             self.is_returning_home = False
             self.is_waiting_for_waypoints = False # [상태 변경] 무한 핑(Ping) 종료
-            
+
             self.publish_current_status() # [상태 변경] 맵 리로드 후 0번 타겟 송출
-            self.get_logger().info(f'총 {len(self.sorted_waypoints)}개의 웨이포인트 정렬 성공. 순차 주행 액션을 시작합니다.')
-            self.start_patrolling_async()
+            self.get_logger().info(f'총 {len(self.sorted_waypoints)}개의 웨이포인트 정렬 성공.')
+            if self.is_running:
+                self.get_logger().info('순차 주행 액션을 시작합니다.')
+                self.start_patrolling_async()
+            else:
+                self.get_logger().info('웨이포인트 갱신 완료. START 명령 대기 중.')
             
         except json.JSONDecodeError:
             self.get_logger().error('JSON 파싱 에러: 올바른 JSON 포맷이 아닙니다.')
@@ -294,6 +296,7 @@ class PatrolNode(Node):
             else:
                 return
 
+        self.publish_current_status()  # 방향 전환 후 보정된 index 기준으로 목표 place 갱신
         wp = self.sorted_waypoints[self.current_wp_index]
         place_id = wp.get("place_id", "Unknown")
         target_x = float(wp.get("x", 0.0))

@@ -290,7 +290,7 @@ class PatrolNode(Node):
             if self.is_running:
                 self.get_logger().info('>>> [왕복 순회 완료] 첫 지점(1번)으로 모두 되돌아왔습니다! GUI pause 명령을 대기합니다.')
                 self.direction = 1
-                self.current_wp_index = 0
+                self.current_wp_index = 0 if n_wps <= 2 else 1
                 self.start_patrolling_async()
                 return
             else:

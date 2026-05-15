@@ -11,8 +11,8 @@ class TrackingNode(Node):
     def __init__(self):
         super().__init__('tracking_node')
 
-        self.safe_distance = 1.0   # 사람까지 유지할 목표 거리 (m)
-        self.arrived_threshold = 0.1  # safe_distance 내 진입 판정 오차 (m)
+        self.safe_distance = 1.3   # 사람까지 유지할 목표 거리 (m)
+        self.arrived_threshold = 0.4  # safe_distance 내 진입 판정 오차 (m)
 
         self.tracking_state = 'IDLE'
         self.auth_published = False  # 도착 pub 중복 방지
@@ -77,7 +77,7 @@ class TrackingNode(Node):
 
         # 전진 제어 (Linear x) - 최대 0.4 m/s
         if error_d > 0.0:
-            twist.linear.x = max(0.0, min(0.4, 0.4 * error_d))
+            twist.linear.x = max(0.0, min(0.6, 0.6 * error_d))
 
         self.cmd_vel_pub.publish(twist)
 

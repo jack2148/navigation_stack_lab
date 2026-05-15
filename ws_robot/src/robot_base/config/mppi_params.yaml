@@ -112,9 +112,9 @@ controller_server:
       batch_size: 400
       vx_std: 0.15
       vy_std: 0.0
-      wz_std: 0.6
-      vx_max: 0.4
-      vx_min: 0.0
+      wz_std: 0.3
+      vx_max: 0.6
+      vx_min: -0.06
       vy_max: 0.0
       wz_max: 0.6
       wz_min: -0.6
@@ -151,7 +151,7 @@ controller_server:
       GoalAngleCritic:
         enabled: true
         cost_power: 1
-        cost_weight: 3.0
+        cost_weight: 1.5
         threshold_to_consider: 0.5
       PreferForwardCritic:
         enabled: true
@@ -257,7 +257,7 @@ global_costmap:
       keepout_filter:
         plugin: "nav2_costmap_2d::KeepoutFilter"
         enabled: true
-        filter_info_topic: "/costmap_filter_info"
+        filter_info_topic: "costmap_filter_info"
       always_send_full_costmap: true
 
 bt_navigator:
@@ -338,7 +338,7 @@ velocity_smoother:
     smoothing_frequency: 15.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.4, 0.0, 0.6]
+    max_velocity: [0.6, 0.0, 0.6]
     min_velocity: [-0.4, 0.0, -0.6]
     max_accel: [1.0, 0.0, 1.0]
     max_decel: [-1.0, 0.0, -1.0]

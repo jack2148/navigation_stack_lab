@@ -31,7 +31,7 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': False,
             'yaml_filename': keepout_mask_file,
-            'topic_name': 'keepout_filter_mask',
+            'topic_name': '/keepout_filter_mask',
             'frame_id': 'map',
         }]
     )
@@ -44,8 +44,8 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': False,
             'type': 0,
-            'filter_info_topic': 'costmap_filter_info',
-            'mask_topic': 'keepout_filter_mask',
+            'filter_info_topic': '/costmap_filter_info',
+            'mask_topic': '/keepout_filter_mask',
             'base': 0.0,
             'multiplier': 1.0,
         }]

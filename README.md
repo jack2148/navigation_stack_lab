@@ -1,8 +1,6 @@
 # Autonomous Security & Patrol Robot — ROS 2 + Nav2
 
-An autonomous indoor patrol robot built on ROS 2 Nav2, covering the full pipeline from SLAM mapping and EKF-based localization to waypoint patrol and real-time person-following — implemented and tested on real hardware.
-
-> **[한국어 요약](#korean-summary)** 는 하단에 있습니다.
+An autonomous indoor patrol robot built on ROS 2 Nav2, covering the full pipeline from SLAM mapping and EKF-based odometry/sensor fusion with AMCL map localization to waypoint patrol and real-time person-following — implemented and tested on real hardware.
 
 ---
 
@@ -91,7 +89,7 @@ Patrolling (Nav2 control)
 
 ### 1. IMU Drift & Sensor Fusion → [details](docs/imu_and_pose_issues.md)
 
-During navigation, yaw deviated by up to **110°** and a persistent **~10° discrepancy** between AMCL and odometry was observed. Custom ROSbag analysis scripts were written to quantify the error over time, and EKF covariance weights were tuned to increase AMCL's contribution relative to IMU.
+During navigation, yaw deviated by up to **110°** and a persistent **~10° discrepancy** between AMCL and odometry was observed. Custom ROSbag analysis scripts were written to quantify the error over time, and EKF covariance weights were tuned to balance wheel-odometry and IMU inputs; AMCL remained the map-frame localization source.
 
 ### 2. DWB Oscillation → MPPI Migration → [details](docs/navigation_issues.md)
 
@@ -99,15 +97,15 @@ The DWB planner produced severe goal-point oscillation and failed to clear costm
 
 ### 3. MPPI CPU Overload & Tuning → [details](docs/mppi_tuning.md)
 
-At initial settings, the control loop dropped from 10 Hz to 5–6 Hz due to CPU overload, causing overshoot and repeated goal-checking loops. Tuning `batch_size`, `time_steps`, and aligning `model_dt = 1 / controller_frequency` stabilized the loop at 20 Hz.
+Reduced MPPI computational bottlenecks by tuning `batch_size`, `time_steps`, and `model_dt`, stabilizing controller execution around a 20 Hz target after the initial configuration degraded to approximately 5–6 Hz under CPU load.
 
 ### 4. AMCL Convergence After Person Tracking
 
 After the person-tracking P-controller preempts Nav2, AMCL needs time to re-converge. Resuming patrol immediately caused MPPI to plan from a stale pose and oscillate near the goal. A **2-second delay + `clearLocalCostmap()`** call before resuming solved this.
 
-### 5. LiDAR Timestamp Drift → [details](docs/sensor_issues.md)
+### 5. LiDAR Timestamp Compatibility → [details](docs/sensor_issues.md)
 
-YDLidar's driver stamped scan messages using sensor-side time, causing `TF_OLD_DATA` warnings and dropped scans in AMCL and the costmap. A lightweight `scan_restamper` node re-stamps incoming scans with `ros::Time::now()` before forwarding to Nav2.
+YDLidar's driver stamped scan messages using sensor-side time, causing `TF_OLD_DATA` warnings and dropped scans in AMCL and the costmap. A lightweight `scan_restamper` node mitigates the timestamp incompatibility by restamping incoming scans at receipt time with `self.get_clock().now().to_msg()` before forwarding them to Nav2. The underlying sensor/transport latency was not independently characterized.
 
 ---
 
@@ -135,6 +133,8 @@ Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odo
 > Blue (Best, Trial 05): smooth, consistent path with minimal lateral deviation.
 > Red (Worst, Trial 02): jagged path with sharp direction changes, caused by CPU lag and control loop delays.
 
+These are the best and worst results from five tested patrol runs, not distribution statistics; results are specific to the tested real-robot configuration.
+
 **Individual trajectories**
 
 | Best Run (Trial 05) | Worst Run (Trial 02) |
@@ -142,6 +142,15 @@ Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odo
 | ![Best](docs/results/best_trajectory.png) | ![Worst](docs/results/worst_trajectory.png) |
 
 For full analysis see [ROS2_MPPI_DWB_Experiment_ICROS](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS.git).
+
+---
+
+## Research Outcomes
+
+This real-robot system supported two ICROS 2026 research presentations:
+
+- **“Performance Comparison of DWB and MPPI Local Planners in ROS 2 Nav2 Environment”** — Poster Presentation, **first author**
+- **“Multimodal Perception and Monitoring System for Indoor Security Patrol Robots”** — Poster Presentation, **Undergraduate Paper Award**
 
 ---
 
@@ -179,7 +188,7 @@ ros2 launch robot_base bringup_nav.launch.py
 ros2 launch robot_base patrol.launch.py
 ```
 
-> The AMCL initial pose is hardcoded in `config/mppi_params.yaml`. Update `initial_pose` (x, y, yaw) to match your environment before launching.
+> The AMCL initial pose is hardcoded in `ws_robot/src/robot_base/config/mppi_params.yaml`. Update `initial_pose` (x, y, yaw) to match your environment before launching.
 
 ---
 
@@ -196,7 +205,7 @@ ros2 launch robot_base patrol.launch.py
 | GUI JSON waypoint interface | Done |
 | Person tracking mode (P-controller) | Done |
 | DWB vs MPPI comparative experiments | [Done](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS.git) |
-| Quantitative planner performance analysis | Planned |
+| Initial quantitative MPPI patrol analysis | Done; broader repeated planner evaluation planned |
 
 ---
 
@@ -211,16 +220,3 @@ ros2 launch robot_base patrol.launch.py
 | Navigation oscillation — DWB → MPPI | [docs/navigation_issues.md](docs/navigation_issues.md) |
 | IMU drift & sensor fusion | [docs/imu_and_pose_issues.md](docs/imu_and_pose_issues.md) |
 | MPPI tuning & crash records | [docs/mppi_tuning.md](docs/mppi_tuning.md) |
-
----
-
-## Korean Summary
-
-ROS 2 Nav2 기반 자율주행 순찰 로봇 시스템입니다. 실제 환경(복도, 사람 장애물)에서 SLAM → 위치 추정 → Waypoint 순찰 → 사람 추적까지의 End-to-End 파이프라인을 직접 구축하고 운용했습니다.
-
-**핵심 문제 해결:**
-1. **IMU Drift 보정** — 최대 110도 Yaw 오차를 ROSbag 분석 스크립트로 정량화하고 EKF 공분산 튜닝으로 해결
-2. **DWB → MPPI 마이그레이션** — 목표 지점 진동 및 Costmap 잔상 문제를 MPPI 전환으로 해결
-3. **사람 추적 모드** — 사람 감지 시 Nav2를 취소하고 P제어로 직접 추적, 사라지면 자동 순찰 재개
-4. **AMCL 수렴 대기** — 추적 종료 후 즉시 재개 시 발생하는 oscillation을 2초 딜레이로 해결
-5. **LiDAR 타임스탬프 보정** — `scan_restamper` 노드로 YDLidar 드라이버의 stamp 불일치 해결

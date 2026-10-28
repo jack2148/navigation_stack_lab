@@ -133,7 +133,7 @@ Five MPPI patrol runs were analyzed for trajectory consistency and time-to-goal.
 ![Trajectory Comparison](docs/results/comparison_trajectory.png)
 
 > Blue (Best, Trial 05): smooth, consistent path with minimal lateral deviation.
-> Red (Worst, Trial 02): jagged path with sharp direction changes, caused by CPU lag and control loop delays.
+> Red (Worst, Trial 02): jagged path with sharp direction changes observed during the run.
 
 These are the best and worst results from five tested patrol runs, not distribution statistics; results are specific to the tested real-robot configuration.
 

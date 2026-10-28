@@ -6,11 +6,11 @@ An autonomous indoor patrol robot built on ROS 2 Nav2, covering the full pipelin
 
 ## Demo
 
-**MPPI — smooth obstacle avoidance**
+**MPPI — obstacle avoidance in the recorded trial**
 
 https://github.com/user-attachments/assets/f9c3c259-7703-4743-8fe3-fea5d009ca3b
 
-**DWB — blocked by obstacle**
+**DWB — blocked in the recorded trial**
 
 https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
 
@@ -20,7 +20,7 @@ https://github.com/user-attachments/assets/b387b12d-7978-4542-97ea-095fd69b85d6
 
 - **End-to-End autonomous pipeline** — SLAM → Localization → Waypoint patrol on real hardware
 - **Sensor fusion** — 2D LiDAR + Wheel Odometry + IMU via EKF (`robot_localization`)
-- **MPPI local planner** — migrated from DWB; smooth obstacle avoidance with Model Predictive Path Integral control
+- **MPPI local planner** — migrated from DWB after navigation issues observed on this robot; tuned for the tested setup
 - **Ping-pong waypoint patrol** — JSON-based waypoint list received from GUI; robot traverses forward and backward repeatedly
 - **Person tracking mode** — on detection, Nav2 is preempted and the robot follows the person using a P-controller via RealSense depth data; automatically resumes patrol when the person disappears
 - **Camera trigger** — publishes a capture trigger on arrival at each waypoint; waits for confirmation before moving to the next
@@ -93,11 +93,11 @@ During navigation, yaw deviated by up to **110°** and a persistent **~10° disc
 
 ### 2. DWB Oscillation → MPPI Migration → [details](docs/navigation_issues.md)
 
-The DWB planner produced severe goal-point oscillation and failed to clear costmap ghost obstacles left by structural pillars. After applying `laser_filter` to suppress near-range noise, DWB's algorithmic limitations remained. Migrating to **MPPI** resolved the oscillation and produced significantly smoother trajectories.
+In this robot's tested environment and configuration, DWB showed severe goal-point oscillation and had difficulty around costmap ghost obstacles left by structural pillars. The behavior persisted after applying `laser_filter` to suppress near-range noise. With the tuned **MPPI** configuration, the observed oscillation was reduced and trajectories were smoother in this setup; this is not a general DWB-versus-MPPI performance claim.
 
 ### 3. MPPI CPU Overload & Tuning → [details](docs/mppi_tuning.md)
 
-Reduced MPPI computational bottlenecks by tuning `batch_size`, `time_steps`, and `model_dt`, stabilizing controller execution around a 20 Hz target after the initial configuration degraded to approximately 5–6 Hz under CPU load.
+Tuned `batch_size`, `time_steps`, and `model_dt` to address MPPI CPU load after an initial configuration degraded to approximately 5–6 Hz. A dedicated configuration (`mppi_coordi.yaml`) targets 20 Hz, while the default `nav2.launch.py` uses `mppi_params.yaml` at a configured 10 Hz; tuning notes also record an 8 Hz stage. These settings do not establish a stable measured runtime frequency across runs.
 
 ### 4. AMCL Convergence After Person Tracking
 
@@ -119,7 +119,9 @@ The map was built using slam_toolbox in a real indoor corridor environment (reso
 
 ## Experiment Results
 
-Repeated patrol runs were conducted to evaluate MPPI navigation consistency. Odometry trajectories were recorded and analyzed across multiple trials.
+### MPPI Patrol Consistency Analysis
+
+Five MPPI patrol runs were analyzed for trajectory consistency and time-to-goal. This was separate from the 20-run DWB/MPPI comparative experiment below.
 
 **Best vs Worst trajectory comparison**
 
@@ -141,7 +143,9 @@ These are the best and worst results from five tested patrol runs, not distribut
 | :---: | :---: |
 | ![Best](docs/results/best_trajectory.png) | ![Worst](docs/results/worst_trajectory.png) |
 
-For full analysis see [ROS2_MPPI_DWB_Experiment_ICROS](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS.git).
+### DWB vs MPPI Comparative Experiment
+
+A separate ICROS experiment compared DWB and MPPI on a physical robot across two scenarios, with five runs per planner per scenario (20 runs total). Its summary and figures are in [ROS2_MPPI_DWB_Experiment_ICROS](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS).
 
 ---
 
@@ -205,7 +209,7 @@ ros2 launch robot_base patrol.launch.py
 | GUI JSON waypoint interface | Done |
 | Person tracking mode (P-controller) | Done |
 | DWB vs MPPI comparative experiments | [Done](https://github.com/jack2148/ROS2_MPPI_DWB_Experiment_ICROS.git) |
-| Initial quantitative MPPI patrol analysis | Done; broader repeated planner evaluation planned |
+| Five-run MPPI patrol analysis | Done; separate from the 20-run ICROS comparison |
 
 ---
 
